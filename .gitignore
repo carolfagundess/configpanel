@@ -1,0 +1,20 @@
+# Variáveis de ambiente (nunca commitar o .env real)
+.env
+
+# Dependências (geradas pelo npm install, não precisam ir pro Git)
+node_modules/
+
+# Build do frontend (gerado automaticamente)
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
