@@ -1,4 +1,7 @@
-const { Pool } = require('pg');
+import 'dotenv/config';
+import pg from 'pg';
+
+const { Pool } = pg;
 
 const pool = new Pool({
   host: process.env.DB_HOST,
@@ -8,14 +11,13 @@ const pool = new Pool({
   password: process.env.DB_PASSWORD,
 });
 
-// Testa a conexão ao inicializar
-pool.connect((err, client, release) => {
-  if (err) {
-    console.error('Erro ao conectar no banco:', err.message);
-    return;
-  }
-  console.log('Conectado ao PostgreSQL com sucesso');
-  release();
+pool.on('error', (err) => {
+  console.error('Erro inesperado no pool do PostgreSQL:', err.message);
 });
 
-module.exports = pool;
+// Testa a conexão ao inicializar
+pool.query('SELECT NOW()')
+  .then(() => console.log('Conectado ao PostgreSQL com sucesso'))
+  .catch(err => console.error('Erro ao conectar no banco:', err.message));
+
+export default pool;

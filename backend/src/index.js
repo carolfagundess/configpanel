@@ -1,5 +1,5 @@
-require('dotenv').config();
-const express = require('express');
+import 'dotenv/config';
+import express from 'express';
 
 const app = express();
 app.use(express.json());
@@ -10,6 +10,8 @@ app.get('/health', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
+
 app.listen(PORT, () => {
   console.log(`Backend ConfigPanel rodando na porta ${PORT}`);
 });
+

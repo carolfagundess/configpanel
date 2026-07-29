@@ -1,6 +1,8 @@
 -- Migration 001 — Tabelas iniciais do ConfigPanel
 -- Baseado no ERD (Seção 15 do SAD)
 
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- Usuários do sistema
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -30,7 +32,8 @@ CREATE TABLE IF NOT EXISTS protocols (
   protocol_number VARCHAR(100) NOT NULL UNIQUE,
   circuit_number VARCHAR(100) NOT NULL,
   client_name VARCHAR(255) NOT NULL,
-  access_type VARCHAR(50) NOT NULL CHECK (access_type IN ('GPON', 'PTP', 'Last Mile')),
+  topology VARCHAR(50) NOT NULL,
+  network VARCHAR(20) NOT NULL CHECK (network IN ('unifique', 'last_mile')),
   service_id UUID REFERENCES services(id),
   delivery_method VARCHAR(50),
   trunk_id UUID REFERENCES trunks(id),
@@ -38,8 +41,23 @@ CREATE TABLE IF NOT EXISTS protocols (
   status VARCHAR(50) NOT NULL DEFAULT 'RECEBIDO',
   assignee_id UUID REFERENCES users(id),
   created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+  updated_at TIMESTAMP DEFAULT NOW(),
+  CONSTRAINT chk_delivery_method_last_mile CHECK (
+    network <> 'last_mile' OR delivery_method IS NOT NULL
+  )
 );
+
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_protocols_updated_at
+BEFORE UPDATE ON protocols
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 -- Histórico de movimentações (imutável — nunca atualizado ou deletado)
 CREATE TABLE IF NOT EXISTS protocol_history (
