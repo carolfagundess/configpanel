@@ -22,7 +22,6 @@ CREATE TABLE IF NOT EXISTS services (
 -- Trunks (pontos de entrega Last Mile)
 CREATE TABLE IF NOT EXISTS trunks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name VARCHAR(255) NOT NULL,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
