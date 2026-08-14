@@ -1,6 +1,6 @@
 import { generateToken } from '../providers/auth.provider.js';
-import pool from '../database/db.js';
-import bcrypt from 'bcryptjs';
+import pool from '../database/connection.js';
+import bcrypt from 'bcrypt';
 
 export async function login(req, res, next) {
     try {
