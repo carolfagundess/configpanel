@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS services (
 -- Trunks (pontos de entrega Last Mile)
 CREATE TABLE IF NOT EXISTS trunks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(255) NOT NULL,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -54,7 +55,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_protocols_updated_at
+CREATE OR REPLACE TRIGGER trg_protocols_updated_at
 BEFORE UPDATE ON protocols
 FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
