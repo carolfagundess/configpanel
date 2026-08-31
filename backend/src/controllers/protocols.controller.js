@@ -90,5 +90,58 @@ export async function createProtocol(req, res) {
     }
 }
 
+/**
+ * GET /protocols
+ * Lista protocolos com paginação e filtro opcional por status (RF14).
+ * Query params: ?limit=50&offset=0&status=RECEBIDO
+ */
+export async function listProtocols(req, res) {
+    const { limit, offset, status } = req.query;
+
+    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
+    const parsedOffset = offset ? parseInt(offset, 10) : undefined;
+
+    if (limit && (isNaN(parsedLimit) || parsedLimit <= 0)) {
+        return res.status(400).json({ error: 'limit deve ser um número positivo.' });
+    }
+    if (offset && (isNaN(parsedOffset) || parsedOffset < 0)) {
+        return res.status(400).json({ error: 'offset deve ser um número não negativo.' });
+    }
+
+    try {
+        const result = await ProtocolsModel.list({
+            limit: parsedLimit,
+            offset: parsedOffset,
+            status,
+        });
+        return res.status(200).json(result);
+    } catch (err) {
+        console.error('Erro ao listar protocolos:', err);
+        return res.status(500).json({ error: 'Erro interno ao listar protocolos.' });
+    }
+}
+
+/**
+ * GET /protocols/:id
+ * Busca um protocolo específico por ID.
+ */
+export async function getProtocolById(req, res) {
+    const { id } = req.params;
+
+    try {
+        const protocol = await ProtocolsModel.findById(id);
+        if (!protocol) {
+            return res.status(404).json({ error: `Protocolo com id ${id} não encontrado.` });
+        }
+        return res.status(200).json(protocol);
+    } catch (err) {
+        if (err.code === '22P02') {
+            return res.status(400).json({ error: `Formato de id inválido: ${id}.` });
+        }
+        console.error('Erro ao buscar protocolo:', err);
+        return res.status(500).json({ error: 'Erro interno ao buscar protocolo.' });
+    }
+}
+
 
 
