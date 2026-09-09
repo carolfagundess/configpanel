@@ -143,5 +143,39 @@ export async function getProtocolById(req, res) {
     }
 }
 
+export async function updateProtocol(req, res) {
+    const { id } = req.params;
+    const changes = req.body;
+
+    if (!changes || Object.keys(changes).length === 0) {
+        return res.status(400).json({ error: 'Nenhum campo para atualizar foi fornecido.' });
+    }
+
+    try {
+        const updatedProtocol = await ProtocolsModel.update(id, changes);
+        if (!updatedProtocol) {
+            return res.status(404).json({ error: `Protocolo com id ${id} não encontrado.` });
+        }
+        return res.status(200).json(updatedProtocol);
+    } catch (err) {
+        // RN08-09 — tentativa de alterar campo fixo (topology)
+        if (err.code === 'RN08_TOPOLOGY_IMMUTABLE') {
+            return res.status(400).json({ error: err.message });
+        }
+        // UUID malformado
+        if (err.code === '22P02') {
+            return res.status(400).json({ error: `Formato de id inválido: ${id}.` });
+        }
+        // Constraint chk_delivery_method_last_mile (RN10), se a atualização violar a regra
+        if (err.code === '23514') {
+            return res.status(400).json({
+                error: 'Violação de regra de negócio: delivery_method é obrigatório para protocolos Last Mile (RN10).',
+            });
+        }
+        console.error('Erro ao atualizar protocolo:', err);
+        return res.status(500).json({ error: 'Erro interno ao atualizar protocolo.' });
+    }
+}
+
 
 
