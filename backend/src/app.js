@@ -1,0 +1,16 @@
+import express from 'express';
+import authRoutes from './routes/auth.routes.js';
+import protocolsRoutes from './routes/protocols.router.js';
+
+const app = express();
+app.use(express.json());
+
+// Rota de health check — confirma que o backend está no ar
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', projeto: 'ConfigPanel' });
+});
+
+app.use('/auth', authRoutes);
+app.use('/', protocolsRoutes);
+
+export default app;
