@@ -162,6 +162,14 @@ export async function updateProtocol(req, res) {
         if (err.code === 'RN08_TOPOLOGY_IMMUTABLE') {
             return res.status(400).json({ error: err.message });
         }
+        // Status inexistente na FSM (nem chegou a tentar transição)
+        if (err.code === 'INVALID_STATUS') {
+            return res.status(400).json({ error: err.message });
+        }
+        // Status válido, mas transição não permitida a partir do estado atual (RN06 / FSM)
+        if (err.code === 'INVALID_TRANSITION') {
+            return res.status(400).json({ error: err.message });
+        }
         // UUID malformado
         if (err.code === '22P02') {
             return res.status(400).json({ error: `Formato de id inválido: ${id}.` });

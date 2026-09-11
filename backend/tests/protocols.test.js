@@ -183,6 +183,13 @@ describe('PATCH /protocols/:id', () => {
 });
 
 afterAll(async () => {
-  await pool.query('DELETE FROM protocols WHERE protocol_number LIKE $1', ['TEST-%']);
+  // protocol_history é imutável por gatilho (RN06); desabilita temporariamente
+  // só para permitir a limpeza dos dados de teste.
+  await pool.query('ALTER TABLE protocol_history DISABLE TRIGGER trg_protocol_history_no_delete');
+  await pool.query(
+    "DELETE FROM protocol_history WHERE protocol_id IN (SELECT id FROM protocols WHERE protocol_number LIKE 'TEST-%')"
+  );
+  await pool.query('ALTER TABLE protocol_history ENABLE TRIGGER trg_protocol_history_no_delete');
+  await pool.query("DELETE FROM protocols WHERE protocol_number LIKE 'TEST-%'");
   await pool.end();
 });

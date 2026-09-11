@@ -1,11 +1,5 @@
 import pool from '../database/connection.js';
-
-/**
- * Model: protocols
- * Aggregate Root do Módulo Desk (Seção 9.2 do SAD).
- *
- * RF16 — dados fixos são imutáveis após abertura; RF17 — dados dinâmicos são editáveis.
- */
+import { canTransition, isValidState } from '../state-machine/protocol.state-machine.js';
 
 const FIXED_FIELDS = ['topology'];
 
@@ -122,7 +116,34 @@ export async function update(id, changes) {
             `Campo(s) imutável(is) após a abertura (RN08–RN09): ${attemptedFixedFields.join(', ')}. ` +
             'Mudança de topologia exige a abertura de um novo protocolo.'
         );
-        error.code = "RN08_TOPOLOGY_IMMUTABLE"; throw error;
+        error.code = 'RN08_TOPOLOGY_IMMUTABLE';
+        throw error;
+    }
+
+    let current = null;
+
+    // RN06 / FSM — valida transição de status, se houver mudança de status no PATCH
+    if (changes.status) {
+        current = await findById(id);
+        if (!current) {
+            return null; // deixa o controller tratar como 404
+        }
+
+        if (!isValidState(changes.status)) {
+            const error = new Error(`Status inválido: ${changes.status}.`);
+            error.code = 'INVALID_STATUS';
+            throw error;
+        }
+
+        if (!canTransition(current.status, changes.status)) {
+            const error = new Error(
+                `Transição inválida: ${current.status} → ${changes.status} não é permitida pela máquina de estados.`
+            );
+            error.code = 'INVALID_TRANSITION';
+            throw error;
+        }
+
+        // TODO: checklist obrigatório ao SAIR da fase técnica em direção a AGENDADO — checklist é dinâmico, ainda não modelado
     }
 
     const validChanges = Object.entries(changes).filter(([key]) =>
@@ -137,8 +158,20 @@ export async function update(id, changes) {
     const values = validChanges.map(([, value]) => value);
 
     const { rows } = await pool.query(
-        `UPDATE protocols SET ${setClauses.join(`,`)} WHERE id = $1 RETURNING *`,
+        `UPDATE protocols SET ${setClauses.join(',')} WHERE id = $1 RETURNING *`,
         [id, ...values]
     );
-    return rows[0] ?? null;
+
+    const updated = rows[0] ?? null;
+
+    // RN06 — histórico automático e imutável a cada mudança de status aceita
+    if (updated && changes.status) {
+        await pool.query(
+            `INSERT INTO protocol_history (protocol_id, status, note)
+         VALUES ($1, $2, $3)`,
+            [id, changes.status, `Transição: ${current.status} → ${changes.status}`]
+        );
+    } 
+
+    return updated;
 }
