@@ -58,7 +58,7 @@ jobs:
           DB_PORT: 5432
           DB_USER: configpanel
           DB_PASSWORD: configpanel_ci
-          DB_NAME: configpanel_civa
+          DB_NAME: configpanel_ci
           JWT_SECRET: segredo-apenas-para-ci
           JWT_EXPIRES_IN: 8h
         run: npm test
