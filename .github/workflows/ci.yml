@@ -1,0 +1,64 @@
+name: CI — Backend
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: configpanel
+          POSTGRES_PASSWORD: configpanel_ci
+          POSTGRES_DB: configpanel_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Faz checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configura o Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Instala dependências
+        run: npm install
+
+      - name: Roda as migrations
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: configpanel
+          DB_PASSWORD: configpanel_ci
+          DB_NAME: configpanel_ci
+        run: npm run migrate
+
+      - name: Roda os testes
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: configpanel
+          DB_PASSWORD: configpanel_ci
+          DB_NAME: configpanel_civa
+          JWT_SECRET: segredo-apenas-para-ci
+          JWT_EXPIRES_IN: 8h
+        run: npm test
