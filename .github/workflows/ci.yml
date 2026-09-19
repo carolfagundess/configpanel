@@ -109,3 +109,31 @@ jobs:
           docker build -t $ECR_REGISTRY/$IMAGE_NAME:latest -t $ECR_REGISTRY/$IMAGE_NAME:${{ github.sha }} .
           docker push $ECR_REGISTRY/$IMAGE_NAME:latest
           docker push $ECR_REGISTRY/$IMAGE_NAME:${{ github.sha }}
+
+  deploy-to-ec2:
+    name: Deploy to EC2
+    needs: push-to-ecr
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          script: |
+            aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-2.amazonaws.com
+            docker pull ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-2.amazonaws.com/configpanel-backend:latest
+            docker stop configpanel-backend
+            docker rm configpanel-backend
+            docker run -d --name configpanel-backend --network configpanel-net \
+              -e DB_HOST=configpanel-postgres \
+              -e DB_PORT=5432 \
+              -e DB_NAME=configpanel \
+              -e DB_USER=admin \
+              -e DB_PASSWORD=configpanel123 \
+              -e JWT_SECRET=segredo-producao-trocar-depois \
+              -e JWT_EXPIRES_IN=8h \
+              -e PORT=3001 \
+              -p 3001:3001 \
+              ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-2.amazonaws.com/configpanel-backend:latest
