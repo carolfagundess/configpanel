@@ -325,3 +325,38 @@ isolada da credencial humana, permitindo revogação independente.
    num job do Actions)
 6. O job executa via SSH a mesma sequência do deploy manual: login no ECR, `docker pull`,
    stop/rm/run
+
+## [2026-09-24] DevOps-5 parte 2: Deploy automático via SSH (execuções e validação)
+
+Continuação da entrada de 18/09. O job `deploy-to-ec2` rodou três vezes no PR #3: duas falharam por configuração e a terceira passou.
+
+**Execução 1 (19/09), falha: `ssh.ParsePrivateKey: ssh: no key found`.** A chave privada do secret `EC2_SSH_PRIVATE_KEY` perdeu a formatação ao ser copiada por seleção de texto no terminal. Correção: copiar o arquivo direto para a área de transferência (`Get-Content $HOME\.ssh\github-actions-deploy-key -Raw | Set-Clipboard`) e atualizar o secret.
+
+**Execução 2 (24/09), falha: `dial tcp ***:22: i/o timeout`.** Com a chave aceita, a conexão nem abria: o Security Group `configpanel-sg` liberava a porta 22 só para o IP doméstico, e o runner do GitHub Actions usa outros IPs. Correção: nova regra SSH com origem `0.0.0.0/0` (aceitável no ambiente de estudo; a autenticação continua dependendo da chave). Na primeira tentativa a regra restrita foi sobrescrita por engano em vez de ganhar uma regra nova. Foi restaurada como regra separada, com o IP atual. Security Group final: 5 regras de entrada.
+
+**Execução 3 (24/09), sucesso.** Job `deploy-to-ec2` concluído em 25s ("Successfully executed commands to all host") e os 4 jobs verdes. Validação funcional via Postman contra `http://3.19.14.99:3001`:
+- `GET /protocols/` sem token → 401 "Token inválido ou expirado" (proteção de rota ativa após o deploy)
+- `POST /auth/login` → 200 OK com token JWT
+
+PR #3 mergeado na `main` em 24/09 às 18:10 UTC.
+
+**Nota metodológica (DevOps-6).** O tempo desta primeira configuração não é comparável a um deploy manual isolado: atravessou vários dias e incluiu problemas de infraestrutura que só aparecem na prática (formato da chave, regras de rede). A métrica válida é o tempo de execução recorrente do pipeline já configurado contra o de um deploy manual recorrente. Os 25s são a duração do job de deploy, não do pipeline fim a fim; o DevOps-6 precisa definir o intervalo medido (por exemplo, do push na `main` até o container respondendo).
+
+## [2026-10-04] DevOps-5 parte 2: Deploy restrito à main e primeira medição limpa
+
+**Problema encontrado.** Os jobs `push-to-ecr` e `deploy-to-ec2` não tinham condição de branch, então rodavam também em eventos `pull_request`. Na prática, qualquer PR sobrescrevia a tag `latest` no ECR e reimplantava a EC2 com código ainda não revisado (foi o que aconteceu no PR #3, antes do merge).
+
+**Correção (PR #4).** `if: github.event_name == 'push' && github.ref == 'refs/heads/main'` nos dois jobs. No próprio PR, `test-backend` (31s) e `build-docker` (14s) passaram e `push-to-ecr` e `Deploy to EC2` ficaram skipped. Depois do merge, o run na `main` executou os 4 jobs com sucesso, então a condição não bloqueia o fluxo real.
+
+**Medição (run 37245387841, push na `main`, merge às 23:53:36 UTC):**
+
+| Job | Duração |
+|---|---|
+| test-backend | 43s |
+| build-docker | 10s |
+| push-to-ecr | 24s |
+| Deploy to EC2 | 24s |
+
+Soma dos jobs: 101s. Run completo: 1m51s (23:53:38 a 23:55:29), com cerca de 10s de espera entre os jobs. Do merge ao fim do último job: 1m52s. Amostra anterior de run completo na `main`: 1m49s (merge do PR #3, 24/09, run 36039412142).
+
+Observação: são duas amostras. Para o DevOps-6 é preciso definir o intervalo medido e coletar mais execuções.
