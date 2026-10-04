@@ -21,6 +21,29 @@ Formato de cada entrada:
 
 ---
 
+## [2026-08-30] Sprint 1, Dia 6 — GET /protocols e GET /protocols/:id
+
+**Fase da trilha:** Produto (Sprint 1, Dia 6 — RF14)
+**Contexto:** implementação dos endpoints de listagem e busca de protocolos,
+completando a leitura básica do Aggregate Root do Módulo Desk. O Dia 6
+havia sido marcado como concluído no board de sprints anteriormente sem o
+código ter sido de fato aplicado — corrigido nesta entrega.
+**O que foi feito:** adicionadas as funções `listProtocols` (paginação via
+`limit`/`offset` e filtro opcional por `status`) e `getProtocolById` ao
+controller; registradas as rotas `GET /protocols` e `GET /protocols/:id`
+no router. Tratamento de UUID malformado (código Postgres 22P02) incluído
+em `getProtocolById`.
+**Evidência:** commit e7a50fe12a6f5e2aa20d8efaffc1392b4d0f3d48, branch sprint-1/dia-6-get-protocols. 6
+cenários de teste validados manualmente contra servidor real: listagem
+básica, filtro por status, paginação com limit, busca por id válido,
+404 para id inexistente, 400 para id malformado — todos passaram.
+**Observações:** reincidência do bug de hot-reload do nodemon em bind
+mount Docker (já registrado em entrada anterior) — foi necessário
+`docker compose restart backend` manual para os testes refletirem o
+código atualizado.
+
+---
+
 ## [2026-08-31] Definição do recorte técnico e planejamento da Trilha DevOps
 
 **Fase da trilha:** Planejamento (pré-DevOps-1)
@@ -106,77 +129,23 @@ fundamentação teórica) resolvida via ajuste de configuração, não de infra.
 
 ---
 
-<!-- Novas entradas abaixo, mais recentes no topo -->
+## [2026-09-01] Separação app.js / index.js (Passo 2)
 
-## [2026-09-09] Correção de gap de segurança — authMiddleware em /protocols
+**Ação:** Separado `backend/src/index.js` em dois arquivos:
+- `app.js` — configuração do Express (middlewares, rotas), sem chamada a `listen()`.
+- `index.js` — carrega `dotenv/config`, importa o `app` de `app.js` e executa `app.listen()`.
 
-**Fase da trilha:** Produto / Correção de gap (RN01-RN02)
-**Contexto:** validação do cronograma via Git (07/09) identificou que as
-rotas de /protocols não passavam pelo authMiddleware, violando RN01-RN02.
-Adicionalmente, inspeção do código durante a correção revelou um bug real
-em `auth.provider.js`: `verifyToken` capturava exceções do `jwt.verify` e
-retornava `null` em vez de propagar o erro, fazendo o `authMiddleware`
-nunca acionar seu bloco de rejeição — tokens inválidos ou expirados
-passavam despercebidos.
-**O que foi feito:**
-  - Corrigido `verifyToken` para propagar o erro do `jwt.verify` (removido
-    o try/catch que o engolia).
-  - Aplicado `authMiddleware` em todas as rotas de `/protocols` (POST,
-    GET, GET/:id, PATCH/:id).
-  - Atualizados os 15 testes de `protocols.test.js` para gerar um token
-    via `generateToken()` e enviá-lo em `Authorization: Bearer <token>`
-    em cada requisição.
-**Validação:** suíte automatizada — 15 testes, 2 suítes, passando com
-autenticação real. Validação manual via Postman: sem token → 401 ("Token
-não fornecido ou inválido"); token malformado → 401 ("Token inválido ou
-expirado" — cenário que só passou a funcionar após a correção do
-verifyToken); token válido → 200 com dados corretos.
-**Observações:** bug de hot-reload do nodemon (já documentado em
-31/08/2026) reincidiu durante a validação — `docker compose restart
-backend` foi necessário para o código atualizado refletir no container.
-Tarefa marcada Done no board Notion (Sprint 1, criada em 07/09/2026).
+**Motivo:** O Supertest precisa importar a aplicação Express configurada sem disparar
+`listen()` — caso contrário, cada execução de teste tentaria abrir uma porta real,
+tornando os testes lentos e sujeitos a conflito de porta.
 
-## [2026-09-09] Sprint 1, Dia 7 — PATCH /protocols/:id
+**Validação:** Backend reiniciado via `docker compose restart backend`; endpoint
+`GET /health` testado manualmente via Postman, retornando `{ "status": "ok", "projeto": "ConfigPanel" }` — confirma que a separação não introduziu regressão.
 
-**Fase da trilha:** Produto (Sprint 1, Dia 7 — RF16)
-**Contexto:** implementação do endpoint de atualização de dados dinâmicos
-do protocolo, com bloqueio de campos fixos (RN08-09) já resolvido na
-camada de model (`Protocols.model.js`, função `update`).
-**O que foi feito:** adicionada `updateProtocol` ao controller, tratando
-os códigos de erro do model (`RN08_TOPOLOGY_IMMUTABLE`, `22P02`, `23514`);
-registrada a rota `PATCH /protocols/:id` no router.
-**Evidência:** 4 cenários validados manualmente via Postman (atualização
-válida, bloqueio de topology, corpo vazio, campo não mapeado ignorado);
-4 testes automatizados adicionados a `protocols.test.js` — suíte completa
-em 15 testes, 2 suítes, todos passando.
-**Observações:** identificado comportamento a revisitar — PATCH com apenas
-campos não mapeados (ex.: `id`) retorna 200 sem alterar nada, sem avisar
-que a atualização foi ineficaz. Não bloqueante para V1, mas vale nota para
-o capítulo de discussão do TCC.
+**Próximo passo:** `npm install --save-dev jest supertest` no backend, para iniciar a
+configuração da suíte de testes automatizados.
 
-## [2026-09-02] Testes de integração para /protocols (DevOps-1)
-
-**Fase da trilha:** DevOps-1 — suíte de testes automatizados
-**Contexto:** expansão da suíte de testes além do `health.test.js` inicial,
-cobrindo agora os endpoints reais do Aggregate Root `/protocols` (POST do
-Dia 5 e GET/GET-by-id do Dia 6), conforme próximo passo apontado na entrada
-anterior.
-**O que foi feito:** criado `tests/protocols.test.js` cobrindo:
-  - POST /protocols: criação válida (201), campos obrigatórios ausentes
-    (400), Last Mile sem `delivery_method` violando RN10 (400),
-    `protocol_number` duplicado (409).
-  - GET /protocols: listagem com paginação (200, formato `{ rows, total }`),
-    filtro por status (200), `limit` inválido (400).
-  - GET /protocols/:id: busca por id existente (200), id inexistente (404),
-    id em formato inválido (400).
-**Validação:** `docker compose exec backend npm test` — 2 suítes, 11 testes,
-todos passando, processo encerra limpo.
-**Evidência:** `backend/tests/protocols.test.js`; saída do `npm test` acima.
-**Observações:** cobertura dos endpoints GET /protocols, GET /protocols/:id
-(Dia 6) e POST /protocols agora conta com validação manual (Postman) e
-automatizada — cumprindo a metodologia híbrida definida em 31/08/2026.
-Próximo passo: DevOps-2 — configurar workflow do GitHub Actions para rodar
-essa suíte automaticamente a cada push/PR.
+---
 
 ## [2026-09-02] Configuração inicial de testes automatizados (DevOps-1)
 
@@ -211,42 +180,83 @@ warnings, processo encerra sozinho.
 endpoints reais de `/protocols` (GET, POST) antes de avançar pro DevOps-2
 (workflow do GitHub Actions).
 
-## [2026-08-30] Sprint 1, Dia 6 — GET /protocols e GET /protocols/:id
+---
 
-**Fase da trilha:** Produto (Sprint 1, Dia 6 — RF14)
-**Contexto:** implementação dos endpoints de listagem e busca de protocolos,
-completando a leitura básica do Aggregate Root do Módulo Desk. O Dia 6
-havia sido marcado como concluído no board de sprints anteriormente sem o
-código ter sido de fato aplicado — corrigido nesta entrega.
-**O que foi feito:** adicionadas as funções `listProtocols` (paginação via
-`limit`/`offset` e filtro opcional por `status`) e `getProtocolById` ao
-controller; registradas as rotas `GET /protocols` e `GET /protocols/:id`
-no router. Tratamento de UUID malformado (código Postgres 22P02) incluído
-em `getProtocolById`.
-**Evidência:** commit e7a50fe12a6f5e2aa20d8efaffc1392b4d0f3d48, branch sprint-1/dia-6-get-protocols. 6
-cenários de teste validados manualmente contra servidor real: listagem
-básica, filtro por status, paginação com limit, busca por id válido,
-404 para id inexistente, 400 para id malformado — todos passaram.
-**Observações:** reincidência do bug de hot-reload do nodemon em bind
-mount Docker (já registrado em entrada anterior) — foi necessário
-`docker compose restart backend` manual para os testes refletirem o
-código atualizado.
+## [2026-09-02] Testes de integração para /protocols (DevOps-1)
 
-## [2026-09-01] Separação app.js / index.js (Passo 2)
+**Fase da trilha:** DevOps-1 — suíte de testes automatizados
+**Contexto:** expansão da suíte de testes além do `health.test.js` inicial,
+cobrindo agora os endpoints reais do Aggregate Root `/protocols` (POST do
+Dia 5 e GET/GET-by-id do Dia 6), conforme próximo passo apontado na entrada
+anterior.
+**O que foi feito:** criado `tests/protocols.test.js` cobrindo:
+  - POST /protocols: criação válida (201), campos obrigatórios ausentes
+    (400), Last Mile sem `delivery_method` violando RN10 (400),
+    `protocol_number` duplicado (409).
+  - GET /protocols: listagem com paginação (200, formato `{ rows, total }`),
+    filtro por status (200), `limit` inválido (400).
+  - GET /protocols/:id: busca por id existente (200), id inexistente (404),
+    id em formato inválido (400).
+**Validação:** `docker compose exec backend npm test` — 2 suítes, 11 testes,
+todos passando, processo encerra limpo.
+**Evidência:** `backend/tests/protocols.test.js`; saída do `npm test` acima.
+**Observações:** cobertura dos endpoints GET /protocols, GET /protocols/:id
+(Dia 6) e POST /protocols agora conta com validação manual (Postman) e
+automatizada — cumprindo a metodologia híbrida definida em 31/08/2026.
+Próximo passo: DevOps-2 — configurar workflow do GitHub Actions para rodar
+essa suíte automaticamente a cada push/PR.
 
-**Ação:** Separado `backend/src/index.js` em dois arquivos:
-- `app.js` — configuração do Express (middlewares, rotas), sem chamada a `listen()`.
-- `index.js` — carrega `dotenv/config`, importa o `app` de `app.js` e executa `app.listen()`.
+---
 
-**Motivo:** O Supertest precisa importar a aplicação Express configurada sem disparar
-`listen()` — caso contrário, cada execução de teste tentaria abrir uma porta real,
-tornando os testes lentos e sujeitos a conflito de porta.
+## [2026-09-09] Correção de gap de segurança — authMiddleware em /protocols
 
-**Validação:** Backend reiniciado via `docker compose restart backend`; endpoint
-`GET /health` testado manualmente via Postman, retornando `{ "status": "ok", "projeto": "ConfigPanel" }` — confirma que a separação não introduziu regressão.
+**Fase da trilha:** Produto / Correção de gap (RN01-RN02)
+**Contexto:** validação do cronograma via Git (07/09) identificou que as
+rotas de /protocols não passavam pelo authMiddleware, violando RN01-RN02.
+Adicionalmente, inspeção do código durante a correção revelou um bug real
+em `auth.provider.js`: `verifyToken` capturava exceções do `jwt.verify` e
+retornava `null` em vez de propagar o erro, fazendo o `authMiddleware`
+nunca acionar seu bloco de rejeição — tokens inválidos ou expirados
+passavam despercebidos.
+**O que foi feito:**
+  - Corrigido `verifyToken` para propagar o erro do `jwt.verify` (removido
+    o try/catch que o engolia).
+  - Aplicado `authMiddleware` em todas as rotas de `/protocols` (POST,
+    GET, GET/:id, PATCH/:id).
+  - Atualizados os 15 testes de `protocols.test.js` para gerar um token
+    via `generateToken()` e enviá-lo em `Authorization: Bearer <token>`
+    em cada requisição.
+**Validação:** suíte automatizada — 15 testes, 2 suítes, passando com
+autenticação real. Validação manual via Postman: sem token → 401 ("Token
+não fornecido ou inválido"); token malformado → 401 ("Token inválido ou
+expirado" — cenário que só passou a funcionar após a correção do
+verifyToken); token válido → 200 com dados corretos.
+**Observações:** bug de hot-reload do nodemon (já documentado em
+31/08/2026) reincidiu durante a validação — `docker compose restart
+backend` foi necessário para o código atualizado refletir no container.
+Tarefa marcada Done no board Notion (Sprint 1, criada em 07/09/2026).
 
-**Próximo passo:** `npm install --save-dev jest supertest` no backend, para iniciar a
-configuração da suíte de testes automatizados.
+---
+
+## [2026-09-09] Sprint 1, Dia 7 — PATCH /protocols/:id
+
+**Fase da trilha:** Produto (Sprint 1, Dia 7 — RF16)
+**Contexto:** implementação do endpoint de atualização de dados dinâmicos
+do protocolo, com bloqueio de campos fixos (RN08-09) já resolvido na
+camada de model (`Protocols.model.js`, função `update`).
+**O que foi feito:** adicionada `updateProtocol` ao controller, tratando
+os códigos de erro do model (`RN08_TOPOLOGY_IMMUTABLE`, `22P02`, `23514`);
+registrada a rota `PATCH /protocols/:id` no router.
+**Evidência:** 4 cenários validados manualmente via Postman (atualização
+válida, bloqueio de topology, corpo vazio, campo não mapeado ignorado);
+4 testes automatizados adicionados a `protocols.test.js` — suíte completa
+em 15 testes, 2 suítes, todos passando.
+**Observações:** identificado comportamento a revisitar — PATCH com apenas
+campos não mapeados (ex.: `id`) retorna 200 sem alterar nada, sem avisar
+que a atualização foi ineficaz. Não bloqueante para V1, mas vale nota para
+o capítulo de discussão do TCC.
+
+---
 
 ## [2026-09-09] Sprint 1, Dia 10 — Validação de persistência e ownership
 
@@ -269,3 +279,49 @@ GET-by-id/PATCH), auth aplicado, persistência de ips/equipment validada.
 Dias 8–9 (grid B2B e formulário de abertura) são tarefas de frontend,
 deliberadamente postergadas — não bloqueiam a trilha DevOps. Marcado Done
 no board Notion.
+
+---
+
+## [2026-09-18] Deploy manual (comparação DevOps-6)
+
+Deploy manual do backend na EC2 após push da imagem nova pro ECR (DevOps-5 parte 1).
+
+**Passos executados:**
+1. Conexão SSH na EC2 via chave `.pem` local
+2. `docker login` no ECR (via `aws sts get-caller-identity` pra obter Account ID)
+3. `docker pull` da imagem `:latest` — 8 camadas baixadas do zero
+4. Reconstrução do comando `docker run` original via `history | grep "docker run"` (não havia `.env` documentado — variáveis foram passadas via `-e` na criação original)
+5. `docker stop` + `docker rm` do container antigo
+6. `docker run` do container novo com as mesmas env vars
+7. Validação: `docker ps` + `docker logs` confirmando conexão ao PostgreSQL
+
+**Observações relevantes para a comparação manual vs. automatizado:**
+- Não houve erro de execução nos comandos Docker/AWS em si
+- O maior tempo gasto foi em **descoberta de contexto**, não em execução: localizar a chave SSH `.pem` local e reconstruir o comando `docker run` original (que dependia de memória/histórico do bash, não de documentação)
+- Isso evidencia uma fragilidade do processo manual: depende de conhecimento tácito do operador, não está formalizado em nenhum artefato versionado
+- **Timestamps não foram registrados nesta execução** — ponto de atenção para a próxima medição
+
+---
+
+## [2026-09-18] DevOps-5 parte 2: Deploy automático via SSH (setup)
+
+Configuração do job de deploy automático na EC2, encadeado após o push da imagem para o ECR.
+
+**Decisão de segurança — chave SSH dedicada:**
+Gerado par de chaves exclusivo para o GitHub Actions (`ssh-keygen -t ed25519`, sem passphrase),
+separado da chave pessoal (`configpanel-key.pem`). Segue o mesmo princípio de menor privilégio
+já aplicado ao usuário IAM `github-actions-deploy` (DevOps-5 parte 1): credencial do robô
+isolada da credencial humana, permitindo revogação independente.
+
+**Passos executados:**
+1. Chave pública (`github-actions-deploy-key.pub`) adicionada ao `~/.ssh/authorized_keys` da EC2
+2. Conexão validada manualmente com a chave nova antes de configurar o GitHub
+3. Confirmado via `aws configure list` que as credenciais AWS na EC2 estão persistidas em
+   `~/.aws/credentials` (shared-credentials-file), não em variáveis de ambiente temporárias —
+   portanto sobrevivem a novas sessões SSH, incluindo as abertas pelo GitHub Actions
+4. Dois novos secrets criados no repositório GitHub: `EC2_HOST` e `EC2_SSH_PRIVATE_KEY`
+5. Novo job `deploy-to-ec2` adicionado ao `ci.yml` (`needs: push-to-ecr`), usando a action de
+   terceiro `appleboy/ssh-action@v1.0.3` (não há forma nativa de rodar SSH interativo direto
+   num job do Actions)
+6. O job executa via SSH a mesma sequência do deploy manual: login no ECR, `docker pull`,
+   stop/rm/run
