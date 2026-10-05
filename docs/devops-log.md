@@ -334,7 +334,7 @@ Continuação da entrada de 18/09. O job `deploy-to-ec2` rodou três vezes no PR
 
 **Execução 2 (24/09), falha: `dial tcp ***:22: i/o timeout`.** Com a chave aceita, a conexão nem abria: o Security Group `configpanel-sg` liberava a porta 22 só para o IP doméstico, e o runner do GitHub Actions usa outros IPs. Correção: nova regra SSH com origem `0.0.0.0/0` (aceitável no ambiente de estudo; a autenticação continua dependendo da chave). Na primeira tentativa a regra restrita foi sobrescrita por engano em vez de ganhar uma regra nova. Foi restaurada como regra separada, com o IP atual. Security Group final: 5 regras de entrada.
 
-**Execução 3 (24/09), sucesso.** Job `deploy-to-ec2` concluído em 25s ("Successfully executed commands to all host") e os 4 jobs verdes. Validação funcional via Postman contra `http://3.19.14.99:3001`:
+**Execução 3 (24/09), sucesso.** Job `deploy-to-ec2` concluído em 25s (run do PR, evento pull_request; no run de main disparado pelo merge, mais tarde no mesmo dia, o job levou 22s) ("Successfully executed commands to all host") e os 4 jobs verdes. Validação funcional via Postman contra `http://3.19.14.99:3001`:
 - `GET /protocols/` sem token → 401 "Token inválido ou expirado" (proteção de rota ativa após o deploy)
 - `POST /auth/login` → 200 OK com token JWT
 
@@ -350,13 +350,13 @@ PR #3 mergeado na `main` em 24/09 às 18:10 UTC.
 
 **Medição (run 37245387841, push na `main`, merge às 23:53:36 UTC):**
 
-| Job | Duração |
-|---|---|
-| test-backend | 43s |
-| build-docker | 10s |
-| push-to-ecr | 24s |
-| Deploy to EC2 | 24s |
+| Job | Run 24/09 (merge PR #3) | Run 04/10 (merge PR #4) |
+|---|---|---|
+| test-backend | 40s | 43s |
+| build-docker | 13s | 10s |
+| push-to-ecr | 22s | 24s |
+| Deploy to EC2 | 22s | 24s |
+| Soma dos jobs | 97s | 101s |
+| Run completo | 1m49s | 1m51s |
 
-Soma dos jobs: 101s. Run completo: 1m51s (23:53:38 a 23:55:29), com cerca de 10s de espera entre os jobs. Do merge ao fim do último job: 1m52s. Amostra anterior de run completo na `main`: 1m49s (merge do PR #3, 24/09, run 36039412142).
-
-Observação: são duas amostras. Para o DevOps-6 é preciso definir o intervalo medido e coletar mais execuções.
+Run 24/09: id 36039412142. Run 04/10: id 37245387841, merge às 23:53:36 UTC, com 1m52s do merge ao fim do último job. O deploy levou 22s a 25s nas três execuções de 24 e 04/10. Observação: são duas amostras de run completo na main; para o DevOps-6 é preciso definir o intervalo medido e coletar mais execuções.
