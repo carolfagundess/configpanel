@@ -348,7 +348,7 @@ PR #3 mergeado na `main` em 24/09 às 18:10 UTC.
 
 **Correção (PR #4).** `if: github.event_name == 'push' && github.ref == 'refs/heads/main'` nos dois jobs. No próprio PR, `test-backend` (31s) e `build-docker` (14s) passaram e `push-to-ecr` e `Deploy to EC2` ficaram skipped. Depois do merge, o run na `main` executou os 4 jobs com sucesso, então a condição não bloqueia o fluxo real.
 
-**Medição (run 37245387841, push na `main`, merge às 23:53:36 UTC):**
+**Medição (runs de push na `main`: 36039412142 e 37245387841):**
 
 | Job | Run 24/09 (merge PR #3) | Run 04/10 (merge PR #4) |
 |---|---|---|
