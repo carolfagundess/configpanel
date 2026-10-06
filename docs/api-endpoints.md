@@ -155,7 +155,7 @@ O conteúdo de `user` é o payload decodificado do JWT.
 
 **Regras**
 - `topology` é imutável (RN08–RN09). Tentar alterá-la retorna 400; mudança de topologia exige novo protocolo.
-- Mudança de `status` é validada pela máquina de estados (veja abaixo). Cada mudança aceita grava um registro imutável em `protocol_history` (RN06).
+- Mudança de `status` é validada pela máquina de estados (veja abaixo). Cada mudança aceita grava um registro imutável em `protocol_history` (RN06), com o status novo e a nota `Transição: A → B`. O campo `changed_by` (quem mudou) ainda não é preenchido.
 - Se o body não tiver nenhum campo atualizável, retorna o protocolo atual sem alterações.
 
 | Código | Situação |

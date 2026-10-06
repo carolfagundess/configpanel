@@ -360,3 +360,11 @@ PR #3 mergeado na `main` em 24/09 às 18:10 UTC.
 | Run completo | 1m49s | 1m51s |
 
 Run 24/09: id 36039412142. Run 04/10: id 37245387841, merge às 23:53:36 UTC, com 1m52s do merge ao fim do último job. O deploy levou 22s a 25s nas três execuções de 24 e 04/10. Observação: são duas amostras de run completo na main; para o DevOps-6 é preciso definir o intervalo medido e coletar mais execuções.
+
+## [2026-10-06] Auditoria e atualização da documentação do repositório
+
+**Fase da trilha:** Transversal (documentação, apoio ao DevOps-6)
+**Contexto:** revisão dos arquivos Markdown contra o estado real do código e do pipeline, antes de iniciar a coleta de métricas do DevOps-6.
+**O que foi feito:** conferidos `api-endpoints.md` (rotas, erros e FSM) e `README.md` contra controllers, router, state machine, migrations e `ci.yml`. Encontrados `docs/adr/api.md` e `docs/adr/erd.md` vazios e o `frontend/README.md` ainda como template do Vite. Ações: `erd.md` preenchido (diagrama Mermaid, regras no banco, observações) e movido para `docs/erd.md`, já que `docs/adr/` não continha nenhum ADR; `api.md` removido (o contrato vigente é o `api-endpoints.md`); `frontend/README.md` reescrito com o estado real; criado `docs/deploy.md` (infraestrutura, secrets, passos do deploy e limitações); README ajustado para informar que push no ECR e deploy só rodam na `main`.
+**Evidência:** commit desta entrada na branch `docs/auditoria-documentacao`.
+**Observações:** a revisão expôs lacunas de código registradas como limitações, não corrigidas: `protocol_history.changed_by` nunca é preenchido; credenciais de produção em texto no `ci.yml`; deploy sem health check ou rollback; migrations fora do pipeline; frontend ainda não consome a API.
