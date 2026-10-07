@@ -104,7 +104,7 @@ O job `deploy-to-ec2` tem dois passos de validação automática: `script_stop: 
 
 - **SSH aberto ao mundo (porta 22):** aceitável no ambiente de estudo; a autenticação depende só da chave.
 - **Sem rollback automático:** o container antigo é removido antes de validar o novo, o que causa indisponibilidade breve e deixa a API fora do ar se a imagem nova falhar. A imagem `latest` é sobrescrita a cada deploy; a tag com o SHA do commit permite voltar manualmente a uma versão anterior.
-- **`/health` não consulta o banco:** o step pós-deploy só valida que o processo da API responde. Se `DB_PASSWORD` (ou outra credencial do banco) divergir do que está no Postgres, o job fica verde e o login falha. Já aconteceu (ver devops-log, 07/10).
+- **`/health` não consulta o banco:** o step pós-deploy só valida que o processo da API responde. Se `DB_PASSWORD` (ou outra credencial do banco) divergir do que está no Postgres, o job fica verde e o login falha. Já aconteceu (ver devops-log, 06/10).
 - **IP público da EC2 não é fixo:** se a instância for reiniciada, o IP muda e o secret `EC2_HOST` precisa ser atualizado, ou o deploy deixa de conectar.
 - **Postgres sem volume nomeado e sem backup:** o container `configpanel-postgres` foi criado com `docker run` sem `-v` (conforme o histórico do shell da EC2 em 17/09), então os dados ficam num volume anônimo, sem nome para reaproveitar. Recriar o container deixa o banco antigo órfão (ou o perde, se o volume for removido), e não há backup.
 - **Migrations não rodam no pipeline:** o deploy não executa `npm run migrate`. Mudanças de schema precisam ser aplicadas à parte.
