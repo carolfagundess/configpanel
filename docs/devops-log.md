@@ -360,3 +360,24 @@ PR #3 mergeado na `main` em 24/09 às 18:10 UTC.
 | Run completo | 1m49s | 1m51s |
 
 Run 24/09: id 36039412142. Run 04/10: id 37245387841, merge às 23:53:36 UTC, com 1m52s do merge ao fim do último job. O deploy levou 22s a 25s nas três execuções de 24 e 04/10. Observação: são duas amostras de run completo na main; para o DevOps-6 é preciso definir o intervalo medido e coletar mais execuções.
+
+## [2026-10-06] Auditoria e atualização da documentação do repositório
+
+**Fase da trilha:** Transversal (documentação, apoio ao DevOps-6)
+**Contexto:** revisão dos arquivos Markdown contra o estado real do código e do pipeline, antes de iniciar a coleta de métricas do DevOps-6.
+**O que foi feito:** conferidos `api-endpoints.md` (rotas, erros e FSM) e `README.md` contra controllers, router, state machine, migrations e `ci.yml`. Encontrados `docs/adr/api.md` e `docs/adr/erd.md` vazios e o `frontend/README.md` ainda como template do Vite. Ações: `erd.md` preenchido (diagrama Mermaid, regras no banco, observações) e movido para `docs/erd.md`, já que `docs/adr/` não continha nenhum ADR; `api.md` removido (o contrato vigente é o `api-endpoints.md`); `frontend/README.md` reescrito com o estado real; criado `docs/deploy.md` (infraestrutura, secrets, passos do deploy e limitações); README ajustado para informar que push no ECR e deploy só rodam na `main`.
+**Evidência:** commit desta entrada na branch `docs/auditoria-documentacao`.
+**Observações:** a revisão expôs lacunas de código registradas como limitações, não corrigidas: `protocol_history.changed_by` nunca é preenchido; credenciais de produção em texto no `ci.yml`; deploy sem health check ou rollback; migrations fora do pipeline; frontend ainda não consome a API.
+
+## [2026-10-06] Segredos fora do ci.yml, health check no deploy e rotação de credenciais
+
+**Fase da trilha:** DevOps-5 parte 2 — Deploy automático (endurecimento)
+**Contexto:** a auditoria de 06/10 registrou que `DB_USER`, `DB_PASSWORD` e `JWT_SECRET` de produção estavam escritos em texto no `ci.yml`. Confirmado que o repositório é **público**, então esses valores estiveram expostos no histórico do Git, e não apenas no arquivo atual.
+**O que foi feito:**
+- PR #6: o deploy passou a ler `DB_USER`, `DB_PASSWORD` e `JWT_SECRET` de GitHub Secrets, ganhou `script_stop: true` e um step final que consulta `/health` com `curl --fail` e retentativas.
+- Rotação: como os valores antigos continuam no histórico, foram considerados comprometidos e substituídos por valores novos nos Secrets. Trocar o Secret não altera a senha dentro do Postgres, que também precisou ser trocada.
+- O run #18 ficou **verde com a senha do banco divergente** (Secret novo, Postgres com a senha antiga). O `/health` não consulta o banco, então o step só provou que o processo da API respondia; o erro só apareceria no login. Correção: `ALTER USER` no Postgres com o valor lido do container da API, alinhando banco e Secret.
+- Segunda rotação do `DB_PASSWORD`, trocando a senha também dentro do Postgres.
+**Evidência:** PR #6; run #18 do GitHub Actions (verde com credencial divergente); run 37546243209 (abaixo).
+**Métrica (se aplicável):** run 37546243209, push na `main` em 06/10: 1m53s no total. Terceira amostra de run completo (as anteriores: 1m49s em 24/09 e 1m51s em 04/10). Esse run é do merge do PR #5 (commit `bae98d0`), anterior ao PR #6, então não tem o step de `/health`: as três amostras preliminares (24/09, 04/10 e 06/10) são todas sem health check. O step só aparece a partir do run #18, que não conta como amostra porque terminou verde com a senha do banco divergente. Continua preliminar: o intervalo medido do DevOps-6 ainda não está definido.
+**Observações:** (1) `script_stop: true` e o step de `/health` pegam falhas de comando e de processo, mas não de credencial do banco. Um check que toque o banco (por exemplo, `/health` com `SELECT 1`, ou um login de teste) continua pendente. (2) Segredos que já estiveram em repositório público devem ser tratados como vazados; reescrever o histórico não resolve, a rotação é o que vale. (3) Nenhum valor de segredo é registrado neste log.

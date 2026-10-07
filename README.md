@@ -96,13 +96,17 @@ O workflow [.github/workflows/ci.yml](.github/workflows/ci.yml) roda em push e p
 
 1. **test-backend** — sobe um Postgres, roda migrations e testes
 2. **build-docker** — builda a imagem do backend
-3. **push-to-ecr** — envia a imagem (`latest` e SHA do commit) para o Amazon ECR
-4. **deploy-to-ec2** — conecta via SSH na EC2, faz pull da imagem e reinicia o contêiner
+3. **push-to-ecr** — envia a imagem (`latest` e SHA do commit) para o Amazon ECR *(só em push na `main`)*
+4. **deploy-to-ec2** — conecta via SSH na EC2, faz pull da imagem e reinicia o contêiner *(só em push na `main`)*
 
-O histórico e as decisões dessa pipeline estão em [docs/devops-log.md](docs/devops-log.md).
+Em pull requests rodam apenas os jobs 1 e 2; a produção só é atualizada após o merge.
+
+A infraestrutura, os secrets necessários e as limitações conhecidas estão em [docs/deploy.md](docs/deploy.md). O histórico e as decisões da pipeline estão em [docs/devops-log.md](docs/devops-log.md).
 
 ## Documentação
 
 - [docs/api-endpoints.md](docs/api-endpoints.md) — endpoints, regras de negócio e máquina de estados
-- [docs/adr/](docs/adr/) — decisões arquiteturais, modelo de dados (`erd.md`) e contrato de API (`api.md`)
+- [docs/erd.md](docs/erd.md) — modelo de dados (diagrama, constraints e triggers)
+- [docs/deploy.md](docs/deploy.md) — infraestrutura AWS, secrets e limitações do deploy
 - [docs/devops-log.md](docs/devops-log.md) — diário do trabalho de DevOps
+- [frontend/README.md](frontend/README.md) — estado e estrutura do frontend

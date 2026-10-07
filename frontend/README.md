@@ -1,16 +1,38 @@
-# React + Vite
+# ConfigPanel — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+SPA em React 19 + Vite. Hoje corresponde ao **Módulo de Ferramentas** (utilitários operacionais, client-side e sem estado).
 
-Currently, two official plugins are available:
+## Estado atual
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Implementado:** gerador de configuração de RouterBoard (`src/pages/RouterBoardForm.jsx`, com a lógica em `src/tools/gerarRouterboard.js`).
+- **Placeholder ("Esta ferramenta ainda não foi portada"):** Ferramentas CIASC, Wifi Business, Calculadora IPv4 e Verificador de Equipamentos.
+- **Ainda não existe:** telas do Módulo Desk (grid de protocolos B2B e formulário de abertura) e login. O frontend **não chama a API** do backend; `VITE_API_URL` está definida em `.env.example`, mas ainda não é usada no código.
 
-## React Compiler
+## Estrutura
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```
+src/
+├── App.jsx                 # layout (topbar + sidebar) e navegação por estado, sem router
+├── components/Sidebar.jsx  # menu lateral
+├── pages/                  # uma página por ferramenta
+└── tools/                  # lógica pura das ferramentas (sem React)
+```
 
-## Expanding the ESLint configuration
+## Como rodar
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Normalmente via Docker Compose, a partir da raiz do repositório (veja o [README principal](../README.md)). O frontend sobe em http://localhost:5173.
+
+Fora do Docker, dentro de `frontend/`:
+
+| Comando           | Descrição                        |
+|-------------------|----------------------------------|
+| `npm run dev`     | Servidor de desenvolvimento      |
+| `npm run build`   | Build de produção                |
+| `npm run preview` | Serve o build localmente         |
+| `npm run lint`    | ESLint                           |
+
+## Variáveis de ambiente
+
+| Variável       | Descrição                                   |
+|----------------|---------------------------------------------|
+| `VITE_API_URL` | URL base da API (ex.: `http://localhost:3001`) |
