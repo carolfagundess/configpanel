@@ -11,9 +11,13 @@ push na main → test-backend → build-docker → push-to-ecr → deploy-to-ec2
                                                 │                │
                                          Amazon ECR        SSH na EC2:
                                   (tags latest e SHA)   pull + stop/rm/run
+                                                                 │
+                                                         step que consulta /health
 ```
 
 Em pull requests rodam apenas `test-backend` e `build-docker`. `push-to-ecr` e `deploy-to-ec2` só executam em push na `main` (condição `github.event_name == 'push' && github.ref == 'refs/heads/main'`). Só código revisado e mergeado chega à produção.
+
+O deploy usa `script_stop: true` (o script SSH aborta no primeiro comando que falhar, e o job fica vermelho) e recebe `DB_USER`, `DB_PASSWORD` e `JWT_SECRET` dos Secrets do repositório. Depois do script SSH, um step consulta `GET /health` na porta `3001` da EC2, com `curl --fail` e até 10 tentativas.
 
 ## Infraestrutura
 
@@ -36,6 +40,8 @@ A EC2 tem as credenciais AWS persistidas em `~/.aws/credentials`, usadas pelo `a
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | Credenciais do usuário `github-actions-deploy` (push no ECR) |
 | `AWS_ACCOUNT_ID` | Monta a URL do registry ECR no passo de deploy |
 | `EC2_HOST` | Endereço da EC2 |
+| `DB_USER`, `DB_PASSWORD` | Usuário e senha do Postgres, repassados ao container da API no `docker run`. Precisam ser os mesmos do banco: trocar o Secret não troca a senha dentro do Postgres |
+| `JWT_SECRET` | Chave de assinatura dos tokens JWT, repassada ao container da API |
 | `EC2_SSH_PRIVATE_KEY` | Chave ed25519 **dedicada** ao GitHub Actions, separada da chave pessoal. Se for recriada, copie o arquivo inteiro para a área de transferência (não por seleção de texto no terminal, que quebra a formatação) |
 
 ## O que o job de deploy executa na EC2
@@ -88,7 +94,7 @@ Os valores de `DB_USER`, `DB_PASSWORD` e `JWT_SECRET` devem ser os mesmos usados
 
 ## Validação pós-deploy
 
-O endpoint `GET /health` existe e é público, mas o pipeline **não o consulta**: o job `deploy-to-ec2` termina quando o script SSH acaba, sem verificar se a API respondeu. A validação é, portanto, manual:
+O job `deploy-to-ec2` tem dois passos de validação automática: `script_stop: true` derruba o job se algum comando do script SSH falhar, e o step "Valida que a API respondeu" consulta `GET /health` (público) com `curl --fail`, tentando até 10 vezes com 3s de intervalo. Isso confirma que o processo da API subiu e responde, mas não que o login funciona (ver "Limitações"). A conferência completa continua manual:
 
 - `GET /health` deve retornar `{"status":"ok","projeto":"ConfigPanel"}`
 - `GET /protocols` sem token deve retornar 401
@@ -96,10 +102,9 @@ O endpoint `GET /health` existe e é público, mas o pipeline **não o consulta*
 
 ## Limitações conhecidas
 
-- **Credenciais no script de deploy:** `DB_USER`, `DB_PASSWORD` e `JWT_SECRET` do container de produção estão escritos em texto no `ci.yml`. Deveriam vir de GitHub Secrets.
 - **SSH aberto ao mundo (porta 22):** aceitável no ambiente de estudo; a autenticação depende só da chave.
-- **Sem rollback automático nem health check:** o container antigo é removido antes de validar o novo, o que causa indisponibilidade breve e deixa a API fora do ar se a imagem nova falhar. A imagem `latest` é sobrescrita a cada deploy; a tag com o SHA do commit permite voltar manualmente a uma versão anterior.
-- **Job verde não garante deploy correto:** `script_stop` está desligado (o padrão é `false` na `appleboy/ssh-action@v1.0.3`), então o script continua mesmo que um comando falhe, e o job pode terminar com sucesso apesar de, por exemplo, o `docker pull` ou o `docker run` ter dado erro.
+- **Sem rollback automático:** o container antigo é removido antes de validar o novo, o que causa indisponibilidade breve e deixa a API fora do ar se a imagem nova falhar. A imagem `latest` é sobrescrita a cada deploy; a tag com o SHA do commit permite voltar manualmente a uma versão anterior.
+- **`/health` não consulta o banco:** o step pós-deploy só valida que o processo da API responde. Se `DB_PASSWORD` (ou outra credencial do banco) divergir do que está no Postgres, o job fica verde e o login falha. Já aconteceu (ver devops-log, 07/10).
 - **IP público da EC2 não é fixo:** se a instância for reiniciada, o IP muda e o secret `EC2_HOST` precisa ser atualizado, ou o deploy deixa de conectar.
 - **Postgres sem volume nomeado e sem backup:** o container `configpanel-postgres` foi criado com `docker run` sem `-v` (conforme o histórico do shell da EC2 em 17/09), então os dados ficam num volume anônimo, sem nome para reaproveitar. Recriar o container deixa o banco antigo órfão (ou o perde, se o volume for removido), e não há backup.
 - **Migrations não rodam no pipeline:** o deploy não executa `npm run migrate`. Mudanças de schema precisam ser aplicadas à parte.
