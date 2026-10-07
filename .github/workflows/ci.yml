@@ -123,6 +123,7 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          script_stop: true
           script: |
             aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-2.amazonaws.com
             docker pull ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-2.amazonaws.com/configpanel-backend:latest
@@ -132,10 +133,13 @@ jobs:
               -e DB_HOST=configpanel-postgres \
               -e DB_PORT=5432 \
               -e DB_NAME=configpanel \
-              -e DB_USER=admin \
-              -e DB_PASSWORD=configpanel123 \
-              -e JWT_SECRET=segredo-producao-trocar-depois \
+              -e DB_USER=${{ secrets.DB_USER }} \
+              -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
+              -e JWT_SECRET=${{ secrets.JWT_SECRET }} \
               -e JWT_EXPIRES_IN=8h \
               -e PORT=3001 \
               -p 3001:3001 \
               ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-2.amazonaws.com/configpanel-backend:latest
+
+      - name: Valida que a API respondeu
+        run: curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-connrefused http://${{ secrets.EC2_HOST }}:3001/health
