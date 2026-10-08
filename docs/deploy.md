@@ -100,6 +100,18 @@ O job `deploy-to-ec2` tem dois passos de validação automática: `script_stop: 
 - `GET /protocols` sem token deve retornar 401
 - `POST /auth/login` deve retornar 200 com token
 
+## Smoke test
+
+[scripts/smoke.ps1](../scripts/smoke.ps1) automatiza a conferência pós-deploy: `GET /health`, `POST /auth/login` e `GET /protocols` com o token, esperando 200 nos três. Para cada passo imprime o horário (Brasília e UTC), método e caminho, status e tempo em ms; no fim, `SMOKE OK` (exit code 0) ou `SMOKE FALHOU` com o passo que falhou (exit code 1). Timeout de 10 s por requisição, sem retry. Não grava nada em disco e nunca imprime a senha nem o token.
+
+```powershell
+$env:CONFIGPANEL_URL = "http://<EC2_HOST>:3001"   # ou use -BaseUrl
+$env:SMOKE_USER = "<USUARIO>"                      # opcional; sem isso o script pergunta
+.\scripts\smoke.ps1                                # a senha é pedida sem eco, se SMOKE_PASS não existir
+```
+
+Se `SMOKE_PASS` for usada, defina-a só na sessão atual e não a grave em arquivo nem em histórico compartilhado.
+
 ## Limitações conhecidas
 
 - **SSH aberto ao mundo (porta 22):** aceitável no ambiente de estudo; a autenticação depende só da chave.
