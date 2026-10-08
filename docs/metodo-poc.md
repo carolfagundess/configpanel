@@ -27,8 +27,8 @@ Em que medida a adoção de práticas DevOps (Docker, GitHub Actions e AWS) melh
   1. `GET /health` responde 200 **consultando o banco** (depende do M3b);
   2. `POST /auth/login` responde 200;
   3. `GET /protocols` com o token responde 200.
-- **Tempo total:** do início ao smoke OK, calculado por **timestamps registrados pelo sistema**, e não por cronômetro. Pipeline: horário de criação do run (`gh run view`, UTC) até o fim do smoke. Manual: horário do primeiro e do último comando no histórico com data e hora.
-- **Nº de comandos:** comandos digitados, contados no histórico (manual) ou no roteiro do pipeline (merge e smoke).
+- **Tempo total:** do início ao smoke OK, calculado por **timestamps registrados pelo sistema**, e não por cronômetro. Pipeline: horário de criação do run (`gh run view`, UTC) até o fim do smoke. Manual: horário do primeiro e do último comando no histórico com data e hora. Como o smoke é disparado por uma pessoa, registrar também a duração do run e a espera até o smoke.
+- **Nº de comandos:** comandos digitados, contados no histórico (manual) ou no roteiro do pipeline (merge e smoke). Comandos de verificação (variáveis de ambiente, atualização do repositório e smoke) são registrados à parte dos de deploy.
 - **Nº de intervenções manuais:** pontos em que uma pessoa precisa digitar, colar, clicar ou decidir, contados pelo roteiro e conferidos no histórico.
 - **Dados sensíveis manipulados à mão:** valores (senhas, chaves) que a operadora digita ou cola.
 - **Falha:** run vermelho, deploy que não passa no smoke, ou falso positivo (pipeline verde com aplicação não funcional). Cada falha é registrada com o tipo.
@@ -147,6 +147,8 @@ O tempo total é descritivo: se empatar ou o pipeline for mais lento, isso é re
 | 04/10 | 37245387841 | 1m51s |
 | 06/10 | 37546243209 | 1m53s (sem step de health) |
 | 07/10 | 37705220239 | 1m49s (jobs: 37s / 15s / 22s / 26s; health sem consulta ao banco) |
+| 07/10 | 37713239762 | 1m38s |
+| 07/10 | 37714902588 | 1m41s (smoke ≈ 1m59s; ensaio) |
 
 - Run 37550804020 (#18, 06/10): falso positivo (pipeline verde, senha do banco divergente); fora das amostras e usado como estudo de caso.
 - Run 35444528525 (24/09): mistura jobs de datas diferentes por re-run parcial; não usar a duração total.
