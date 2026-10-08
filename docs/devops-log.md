@@ -381,3 +381,15 @@ Run 24/09: id 36039412142. Run 04/10: id 37245387841, merge às 23:53:36 UTC, co
 **Evidência:** PR #6; run #18 do GitHub Actions (verde com credencial divergente); run 37546243209 (abaixo).
 **Métrica (se aplicável):** run 37546243209, push na `main` em 06/10: 1m53s no total. Terceira amostra de run completo (as anteriores: 1m49s em 24/09 e 1m51s em 04/10). Esse run é do merge do PR #5 (commit `bae98d0`), anterior ao PR #6, então não tem o step de `/health`: as três amostras preliminares (24/09, 04/10 e 06/10) são todas sem health check. O step só aparece a partir do run #18, que não conta como amostra porque terminou verde com a senha do banco divergente. Continua preliminar: o intervalo medido do DevOps-6 ainda não está definido.
 **Observações:** (1) `script_stop: true` e o step de `/health` pegam falhas de comando e de processo, mas não de credencial do banco. Um check que toque o banco (por exemplo, `/health` com `SELECT 1`, ou um login de teste) continua pendente. (2) Segredos que já estiveram em repositório público devem ser tratados como vazados; reescrever o histórico não resolve, a rotação é o que vale. (3) Nenhum valor de segredo é registrado neste log.
+
+## [2026-10-07] PR #7 mergeado, primeiro run com health check validado e proposta do método da PoC
+
+**Fase da trilha:** Transversal (documentação e preparação do DevOps-6)
+**Contexto:** fechar a auditoria da documentação e registrar a primeira medição do pipeline já com o step de `/health`, antes da orientação de 08/10. Horários em Brasília (UTC-3).
+**O que foi feito:**
+- PR #7 (auditoria da documentação, `deploy.md` e registro da rotação de segredos) validado e mergeado às ~20:58, commit `9e9ed9b`. Antes do merge, `test-backend` e `build-docker` passaram e `push-to-ecr` e `Deploy to EC2` ficaram skipped, como esperado em PR.
+- Run da `main` #21 (id 37705220239), disparado pelo merge: início 20:58:22, fim 21:00:11, **1m49s**. Os 4 jobs concluíram com sucesso; o step "Valida que a API respondeu" passou.
+- Método da PoC proposto em `docs/metodo-poc.md`: deploy manual vs. pipeline, com o DORA adaptado, métricas por timestamps, comandos e intervenções. Fica como proposta a validar com a orientadora na orientação de 08/10.
+**Evidência:** PR #7; run 37705220239.
+**Métrica (se aplicável):** run 37705220239: test-backend 37s, build-docker 15s, push-to-ecr 22s, Deploy to EC2 26s, run completo 1m49s. Amostra preliminar nº 4 (anteriores: 24/09, 04/10 e 06/10). É a primeira com o step de health, mas o `/health` ainda não consulta o banco, então a amostra segue preliminar e fora das amostras oficiais da PoC.
+**Observações:** pendente: validar o login pelo Postman via hotspot, para confirmar que a API responde corretamente com as credenciais atuais. O check que toca o banco continua pendente (ver entrada de 06/10).
