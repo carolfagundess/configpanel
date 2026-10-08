@@ -392,4 +392,17 @@ Run 24/09: id 36039412142. Run 04/10: id 37245387841, merge às 23:53:36 UTC, co
 - Método da PoC proposto em `docs/metodo-poc.md`: deploy manual vs. pipeline, com o DORA adaptado, métricas por timestamps, comandos e intervenções. Fica como proposta a validar com a orientadora na orientação de 08/10.
 **Evidência:** PR #7; run 37705220239.
 **Métrica (se aplicável):** run 37705220239: test-backend 37s, build-docker 15s, push-to-ecr 22s, Deploy to EC2 26s, run completo 1m49s. Amostra preliminar nº 4 (anteriores: 24/09, 04/10 e 06/10). É a primeira com o step de health, mas o `/health` ainda não consulta o banco, então a amostra segue preliminar e fora das amostras oficiais da PoC.
-**Observações:** pendente: validar o login pelo Postman via hotspot, para confirmar que a API responde corretamente com as credenciais atuais. O check que toca o banco continua pendente (ver entrada de 06/10).
+**Observações:** login validado pelo script de smoke (ver entrada abaixo). O check que toca o banco continua pendente (ver entrada de 06/10).
+
+## [2026-10-07] Ensaio da PoC, script de smoke e conta de teste
+
+**Fase da trilha:** Transversal (preparação do DevOps-6)
+**Contexto:** fechar o método da PoC e o script de smoke, e ensaiar o fluxo merge, pipeline e smoke antes das coletas oficiais. Horários em Brasília (UTC-3).
+**O que foi feito:**
+- PR #8 (método v1.1, `docs/metodo-poc.md`) e PR #9 (`scripts/smoke.ps1`) mergeados.
+- Runs da `main`: #24 (id 37713239762, commit `23b6763`, criado 22:30:11, 1m38s) e #26 (id 37714902588, commit `10b5193`, criado 22:50:23, terminou 22:52:04, 1m41s; jobs: test-backend 33s, build-docker 9s, push-to-ecr 21s, Deploy to EC2 28s).
+- Conta de teste `smoke.teste` criada no Postgres da EC2, porque a API não tem rota de cadastro. Nenhuma senha foi gravada no repositório.
+- Ensaio (fora das amostras oficiais): merge às 22:50:22; último 200 do smoke às 22:52:21,5; tempo do run criado até o smoke OK ≈ 1m59s; 0 falhas. O smoke manual no fim inclui ~17 s de espera humana.
+**Evidência:** PR #8; PR #9; runs 37713239762 e 37714902588.
+**Métrica (se aplicável):** run 37714902588: 1m41s (jobs: 33s / 9s / 21s / 28s); do run criado até o smoke OK ≈ 1m59s. Run 37713239762: 1m38s. Ambos são ensaio e ficam fora das amostras oficiais.
+**Observações:** (1) o `/health` ainda não consulta o banco (M3b). (2) Os comandos de verificação (variáveis de ambiente, atualização do repositório) são contados à parte dos de deploy. (3) O ensaio manual ainda está pendente. (4) Nenhuma senha ou token é registrado neste log.
