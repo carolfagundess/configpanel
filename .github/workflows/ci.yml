@@ -142,4 +142,4 @@ jobs:
               ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-2.amazonaws.com/configpanel-backend:latest
 
       - name: Valida que a API respondeu
-        run: curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-connrefused http://${{ secrets.EC2_HOST }}:3001/health
+        run: curl --fail-with-body --silent --show-error --max-time 5 --retry 10 --retry-delay 3 --retry-connrefused http://${{ secrets.EC2_HOST }}:3001/health
