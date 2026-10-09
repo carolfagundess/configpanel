@@ -10,7 +10,7 @@ on:
 
 jobs:
   test-backend:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     services:
       postgres:
@@ -64,7 +64,7 @@ jobs:
         run: npm test
 
   build-docker:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: test-backend
 
     defaults:
@@ -79,7 +79,7 @@ jobs:
         run: docker build -t configpanel-backend:ci .
 
   push-to-ecr:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: build-docker
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
@@ -115,7 +115,7 @@ jobs:
     name: Deploy to EC2
     needs: push-to-ecr
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
