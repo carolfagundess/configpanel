@@ -51,7 +51,7 @@ Pré-requisito: Docker e Docker Compose.
 | Backend  | http://localhost:3001   |
 | Postgres | localhost:5432          |
 
-Teste rápido: `GET http://localhost:3001/health` deve retornar `{"status":"ok","projeto":"ConfigPanel"}`.
+Teste rápido: `GET http://localhost:3001/health` deve retornar `{"status":"ok","projeto":"ConfigPanel","db":"up"}` (ou 503 com `"db":"down"` se o Postgres estiver indisponível).
 
 ### Variáveis de ambiente do backend
 

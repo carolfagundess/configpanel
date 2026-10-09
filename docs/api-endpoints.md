@@ -36,9 +36,16 @@ O token é obtido em `POST /auth/login`. Sem token, ou com token inválido/expir
 
 ### `GET /health`
 
-**200 OK**
+Público (não exige token). Executa `SELECT 1` no banco com timeout de 2 s (configurável por `HEALTH_DB_TIMEOUT_MS`).
+
+**200 OK** — banco respondeu
 ```json
-{ "status": "ok", "projeto": "ConfigPanel" }
+{ "status": "ok", "projeto": "ConfigPanel", "db": "up" }
+```
+
+**503 Service Unavailable** — banco indisponível ou timeout (sem detalhes do erro)
+```json
+{ "status": "error", "projeto": "ConfigPanel", "db": "down" }
 ```
 
 ---
