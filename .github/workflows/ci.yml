@@ -143,3 +143,21 @@ jobs:
 
       - name: Valida que a API respondeu
         run: curl --fail-with-body --silent --show-error --max-time 5 --retry 10 --retry-delay 3 --retry-connrefused http://${{ secrets.EC2_HOST }}:3001/health
+
+  smoke-test:
+    name: Smoke test
+    needs: deploy-to-ec2
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Faz checkout do código
+        uses: actions/checkout@v4
+
+      - name: Roda o smoke test
+        env:
+          CONFIGPANEL_URL: http://${{ secrets.EC2_HOST }}:3001
+          SMOKE_USER: ${{ secrets.SMOKE_USER }}
+          SMOKE_PASS: ${{ secrets.SMOKE_PASS }}
+        shell: bash
+        run: pwsh -NonInteractive -File scripts/smoke.ps1
