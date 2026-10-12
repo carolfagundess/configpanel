@@ -8,6 +8,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   test-backend:
     runs-on: ubuntu-24.04
@@ -116,6 +119,10 @@ jobs:
     needs: push-to-ecr
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
+    environment: production
+    concurrency:
+      group: deploy-prod
+      cancel-in-progress: false
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
