@@ -112,6 +112,21 @@ $env:SMOKE_USER = "<USUARIO>"                      # opcional; sem isso o script
 
 Se `SMOKE_PASS` for usada, defina-a só na sessão atual e não a grave em arquivo nem em histórico compartilhado.
 
+### Conta de teste
+
+A API não tem rota de cadastro, então a conta do smoke é criada direto no Postgres, usando o `pgcrypto` (extensão criada na migration 001) para gerar o hash bcrypt que o login confere. Na EC2, leia a senha sem eco, insira e apague a variável; assim a senha não vai para arquivo nem para o histórico:
+
+```bash
+read -rsp "Senha da conta de teste: " SMOKE_PW; echo
+docker exec -i <CONTAINER_POSTGRES> psql -U <DB_USER> -d <DB_NAME> <<SQL
+INSERT INTO users (name, username, password_hash)
+VALUES ('<NOME>', '<USUARIO>', crypt('$SMOKE_PW', gen_salt('bf', 10)));
+SQL
+unset SMOKE_PW
+```
+
+O shell expande a variável só dentro do documento enviado ao `psql`, então o comando gravado no histórico contém `$SMOKE_PW`, não o valor. Use uma senha sem aspas simples. Não registre a senha no repositório, no devops-log nem em issues.
+
 ## Limitações conhecidas
 
 - **SSH aberto ao mundo (porta 22):** aceitável no ambiente de estudo; a autenticação depende só da chave.
