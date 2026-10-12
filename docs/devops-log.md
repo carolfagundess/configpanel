@@ -418,3 +418,28 @@ Run 24/09: id 36039412142. Run 04/10: id 37245387841, merge às 23:53:36 UTC, co
 **Evidência:** PR #10; run #34 (commit `5738138`).
 **Métrica (se aplicável):** não se aplica; run fora das amostras da PoC.
 **Observações:** nenhum valor de segredo é registrado neste log.
+
+## [2026-10-12] PRs #15, #16 e #17 mergeados; runs #38 e #40; decisões de 08/10 e 11/10
+
+**Fase da trilha:** Transversal (preparação do DevOps-6)
+**Contexto:** registrar os merges de 12/10 (UTC) e as decisões da orientação (08/10) e do ensaio (11/10), antes de congelar o ambiente e começar as coletas. Horários em UTC.
+**O que foi feito:**
+- PR #15 (`ci: restringe permissões, serializa o deploy e usa o environment production`): `permissions: contents: read`, `environment: production` e `concurrency` (`deploy-prod`, sem cancelar) no job de deploy. Merge às 01:18 UTC, commit `ee8b787`. **Run #38** (id 38191387080).
+- PR #16 (`docs: adiciona o roteiro manual final e a ficha de coleta da PoC`): merge às 01:23 UTC, commit `12d7490`, com a flag de pular CI no título do squash, digitada à mão. **Não gerou run**, o que confirma o teste que estava pendente na entrada de 11/10.
+- PR #17 (`ci: smoke aceita qualquer 2xx, informa chamadas_2xx e horário de fim`): merge às 01:40 UTC, commit `c77fdaa`. **Run #40** (id 38192782924). O run #39 (id 38192690494) é o do PR, antes do merge, sem deploy.
+- Decisões registradas em `docs/metodo-poc.md` (v1.2, seção 1.1): pergunta norteadora aprovada em 08/10; escopo só de eficiência e qualidade; leitura B (cada amostra é um incremento real de código); molde de "uma rota nova" (model, controller e router, no mínimo 3 testes Jest, 1 passo no smoke, sem migration); opção 4 (merge com a flag de pular CI no título do squash e deploy manual a partir da main, no commit do merge); smoke aceita qualquer 2xx; congelamento do ambiente, não do código da API.
+- Limitação registrada: o `Pool` do `pg` não define `connectionTimeoutMillis`.
+**Evidência:** PRs #15, #16 e #17; runs #38 e #40.
+**Métrica (se aplicável):** os dois runs são **fora das amostras da PoC** (anteriores ao congelamento do ambiente).
+
+| Job | Run #38 (merge PR #15) | Run #40 (merge PR #17) |
+|---|---|---|
+| test-backend | 37s | 38s |
+| build-docker | 15s | 16s |
+| push-to-ecr | 26s | 15s |
+| Deploy to EC2 | 31s | 26s |
+| Smoke test | 8s | 12s |
+| Run completo (criação ao fim) | 2m11s | 1m58s |
+
+Run #38: criado 01:18:37, fim 01:20:48. Run #40: criado 01:40:14, fim 01:42:12. Os dois terminaram com sucesso nos 5 jobs, com o job de smoke como último.
+**Observações:** (1) o run #38 é o primeiro com `environment: production`; o tempo total maior inclui a espera entre jobs e não deve ser lido como regressão. (2) Nenhum valor de segredo é registrado neste log.

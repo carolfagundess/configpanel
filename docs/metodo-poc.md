@@ -1,18 +1,20 @@
 # Método da PoC — Deploy manual vs. pipeline (ConfigPanel)
 
-Versão 1.1 — 07/10/2026 (horários de Brasília, UTC-3; horários do GitHub/EC2 aparecem em UTC e são rotulados)
-Status: **proposta**, a validar com a orientadora na orientação de 08/10/2026.
+Versão 1.2 — 12/10/2026 (horários de Brasília, UTC-3; horários do GitHub/EC2 aparecem em UTC e são rotulados)
+Status: **validado com a orientadora em 08/10/2026** e ajustado após o ensaio manual de 11/10/2026 (ver 1.1).
+
+Mudança da v1.1 para a v1.2: pergunta norteadora aprovada em 08/10; escopo reduzido a eficiência e qualidade; cada amostra passa a ser um incremento real de código (leitura B), seguindo um molde fixo; merge das coletas com " skip ci" no título e deploy manual a partir da main (opção 4); o smoke aceita qualquer 2xx; o congelamento vale para o ambiente, não para o código da API.
 
 Mudança da v1.0 para a v1.1: o "tempo ativo do operador" foi retirado do critério (depende da anotação da própria operadora e é passível de erro ou manipulação). Entraram métricas registradas pelo sistema: tempo total por timestamps, nº de comandos, nº de intervenções manuais e nº de dados sensíveis manipulados à mão. O teste de falha (c) passou a ser tratado como **detecção**, e não como bloqueio (ver 4.3).
 
 ## 1. Pergunta e hipótese
 
-**Pergunta norteadora (proposta; confirmar redação com o texto do TCC):**
-Em que medida a adoção de práticas DevOps (Docker, GitHub Actions e AWS) melhora a entrega de software do ConfigPanel, em comparação com o processo manual, no contexto de um ISP?
+**Pergunta norteadora (aprovada em 08/10):**
+Em que medida a adoção de práticas DevOps (Docker, GitHub Actions e AWS) melhora a entrega de software do ConfigPanel, em comparação com o processo manual?
 
-**Hipótese:** o pipeline reduz o esforço manual (comandos e intervenções) e os erros, e barra código quebrado antes da produção. O tempo total pode ficar parecido.
+**Hipótese:** o pipeline reduz o esforço manual e os erros e barra código quebrado antes da produção. O tempo total pode ficar parecido.
 
-"Melhor" é multicritério e é desdobrado em quatro eixos:
+"Melhor" é multicritério e foi desdobrado em quatro eixos. **Escopo decidido em 08/10: a comparação cobre apenas os eixos 1 (eficiência) e 2 (qualidade).** Os eixos 3 e 4 ficam fora da comparação; o checklist da seção 4.4 é material complementar, descritivo.
 
 | Eixo | Sub-pergunta |
 |---|---|
@@ -21,12 +23,24 @@ Em que medida a adoção de práticas DevOps (Docker, GitHub Actions e AWS) melh
 | 3. Confiabilidade | A entrega é repetível e sem falsos positivos? |
 | 4. Segurança e rastreabilidade | Os segredos ficam protegidos e dá para rastrear o que foi publicado? |
 
+### 1.1 Decisões da orientação (08/10) e do ensaio (11/10)
+
+| Data | Decisão |
+|---|---|
+| 08/10 | Escopo: só eficiência e qualidade (eixos 1 e 2). |
+| 08/10 | Leitura B: cada amostra é um **incremento real de código**, e não uma mudança artificial. |
+| 11/10 | Molde de "uma rota nova": model + controller + router, no mínimo 3 testes Jest, 1 passo novo no smoke e **sem migration**. |
+| 11/10 | Opção 4 para as amostras manuais: o merge usa " skip ci" (entre colchetes) no título do commit de squash, digitado à mão, para o pipeline não rodar; o deploy manual parte da main, no commit do merge. |
+| 11/10 | O smoke aceita **qualquer 2xx** (não só 200) e imprime `chamadas_2xx` e o horário de fim na última linha. |
+| 11/10 | O congelamento vale para o **ambiente** (EC2, banco, `runs-on`, versões e front-end em branch), não para o código da API, que muda a cada amostra. |
+
 ## 2. Definições operacionais
 
 - **Deploy bem-sucedido** (igual nas duas modalidades), verificado por um script de smoke:
-  1. `GET /health` responde 200 **consultando o banco** (depende do M3b);
-  2. `POST /auth/login` responde 200;
-  3. `GET /protocols` com o token responde 200.
+  1. `GET /health` responde 2xx **consultando o banco** (M3b, concluído);
+  2. `POST /auth/login` responde 2xx;
+  3. `GET /protocols` com o token responde 2xx;
+  4. a cada amostra, o passo da rota nova acrescentado ao smoke também responde 2xx.
 - **Tempo total:** do início ao smoke OK, calculado por **timestamps registrados pelo sistema**, e não por cronômetro. Pipeline: horário de criação do run (`gh run view`, UTC) até o fim do smoke. Manual: horário do primeiro e do último comando no histórico com data e hora. Como o smoke é disparado por uma pessoa, registrar também a duração do run e a espera até o smoke.
 - **Nº de comandos:** comandos digitados, contados no histórico (manual) ou no roteiro do pipeline (merge e smoke). Comandos de verificação (variáveis de ambiente, atualização do repositório e smoke) são registrados à parte dos de deploy.
 - **Nº de intervenções manuais:** pontos em que uma pessoa precisa digitar, colar, clicar ou decidir, contados pelo roteiro e conferidos no histórico.
@@ -51,17 +65,17 @@ Correspondência com o DORA: lead time for changes (trecho de deploy), change fa
 ## 4. Coleta
 
 ### 4.1 Pré-requisitos (até 13/10)
-- M3b: `/health` consultando o banco (503 se falhar).
-- `runs-on` fixo (a etiqueta `ubuntu-latest` migra para Ubuntu 26 em 19/10/2026).
-- Script de smoke e roteiro manual escrito (passos vindos do `docs/deploy.md`).
-- Ficha de coleta em CSV.
+- M3b: `/health` consultando o banco (503 se falhar). **Feito** (PR #11).
+- `runs-on` fixo (a etiqueta `ubuntu-latest` migra para Ubuntu 26 em 19/10/2026). **Feito** (PR #12, `ubuntu-24.04`).
+- Script de smoke (**feito**, PRs #9, #13 e #17) e roteiro manual escrito (**feito**, `docs/roteiro-manual.md`).
+- Ficha de coleta em CSV (**feita**, `docs/ficha-coleta.csv`).
 - Registro automático do manual: na EC2, histórico com data e hora (`HISTTIMEFORMAT="%F %T "`); no computador, histórico do PowerShell ou gravação do terminal. **O que captura melhor uma sessão SSH no Windows será testado no piloto.**
-- O front-end fica em **branch**, fora da main, até o fim das coletas, para o build não mudar no meio.
+- O front-end fica em **branch**, fora da main, até o fim das coletas, para o build não mudar no meio. O que se congela é o ambiente; o código da API muda a cada amostra (seção 1.1).
 
 ### 4.2 Procedimento
 1. **Piloto:** 1 deploy manual de treino, descartado e documentado (absorve o aprendizado e testa o registro automático).
 2. **Amostra:** 5 pares (5 pipeline + 5 manual), **alternando** as modalidades.
-3. **Mudança:** pequena e equivalente em todas as coletas; os testes rodam nas duas modalidades.
+3. **Mudança:** cada amostra é um incremento real de código (leitura B), seguindo o molde de "uma rota nova" da seção 1.1 (model, controller e router, no mínimo 3 testes Jest, 1 passo no smoke, sem migration), para que as amostras tenham tamanho equivalente. Os testes rodam nas duas modalidades.
 4. **Ambiente:** o deploy manual sempre de casa ou do hotspot (a rede da instituição bloqueia as portas 22 e 3001); registrar o ambiente de cada coleta.
 5. **Roteiro manual:** testes locais, build da imagem, login e push no ECR, SSH na EC2, pull, troca do container, smoke.
 6. **Ficha por coleta:** nº, modalidade, data/hora de início (Brasília), commit, run id, ambiente, tempo total, nº de comandos, nº de intervenções, dados sensíveis manipulados, erros, observações.
@@ -120,12 +134,14 @@ O tempo total é descritivo: se empatar ou o pipeline for mais lento, isso é re
 - **Cache de camadas do Docker** no build local.
 - **Construto:** "melhor" foi traduzido em quatro eixos; custo e curva de aprendizado ficam de fora.
 - **Testes:** o manual precisa rodar os testes para a comparação ser justa (ou reportar os dois cenários).
+- **Incrementos de código diferentes entre amostras:** o molde fixo limita, mas não elimina, a variação de tamanho e de complexidade entre as rotas.
+- **Pool de conexões sem `connectionTimeoutMillis`:** o `Pool` do `pg` (`backend/src/database/connection.js`) não limita o tempo de espera por conexão. Com o banco travado, uma requisição que usa o pool pode ficar pendurada, sem erro. O `/health` não sofre disso porque tem timeout próprio (2 s). Limitação registrada, não corrigida, para não alterar a API fora do escopo da PoC.
 
 ## 10. Cronograma
 
 | Quando | O quê |
 |---|---|
-| 08/10 | Orientação: validar pergunta, eixos, critério e n |
+| 08/10 | Orientação: pergunta aprovada; escopo e leitura B decididos |
 | 09 a 11/10 | M3b, script de smoke, roteiro manual, ficha CSV |
 | 13/10 | `runs-on` fixo, método fechado, piloto manual descartado |
 | 14 a 20/10 | 10 coletas (5 + 5, alternando) e testes de falha (a) e (b) |

@@ -1,21 +1,23 @@
 # Deploy (AWS)
 
-Estado verificado em 06/10/2026; itens da AWS conferidos pelo console em 24/09.
+Estado verificado em 12/10/2026; itens da AWS conferidos pelo console em 24/09.
 
 Como o backend chega à produção. Descreve o que o pipeline em [.github/workflows/ci.yml](../.github/workflows/ci.yml) faz e a infraestrutura que ele pressupõe. O histórico das decisões está em [devops-log.md](devops-log.md).
 
 ## Visão geral
 
 ```
-push na main → test-backend → build-docker → push-to-ecr → deploy-to-ec2
-                                                │                │
-                                         Amazon ECR        SSH na EC2:
-                                  (tags latest e SHA)   pull + stop/rm/run
-                                                                 │
+push na main → test-backend → build-docker → push-to-ecr → deploy-to-ec2 → smoke-test
+                                                │                │               │
+                                         Amazon ECR        SSH na EC2:      scripts/smoke.ps1
+                                  (tags latest e SHA)   pull + stop/rm/run  (/health, login,
+                                                                 │           /protocols)
                                                          step que consulta /health
 ```
 
-Em pull requests rodam apenas `test-backend` e `build-docker`. `push-to-ecr` e `deploy-to-ec2` só executam em push na `main` (condição `github.event_name == 'push' && github.ref == 'refs/heads/main'`). Só código revisado e mergeado chega à produção.
+Em pull requests rodam apenas `test-backend` e `build-docker`. `push-to-ecr`, `deploy-to-ec2` e `smoke-test` só executam em push na `main` (condição `github.event_name == 'push' && github.ref == 'refs/heads/main'`). Só código revisado e mergeado chega à produção. Os quatro jobs usam `runs-on: ubuntu-24.04`, e o workflow declara `permissions: contents: read`.
+
+O job `deploy-to-ec2` usa o environment `production` e o grupo de concorrência `deploy-prod` (`cancel-in-progress: false`): dois deploys nunca rodam ao mesmo tempo, e um deploy em andamento não é cancelado por um run mais novo, que espera na fila. O último job, `smoke-test` (`needs: deploy-to-ec2`, timeout de 5 minutos), roda `scripts/smoke.ps1` com PowerShell no runner.
 
 O deploy usa `script_stop: true` (o script SSH aborta no primeiro comando que falhar, e o job fica vermelho) e recebe `DB_USER`, `DB_PASSWORD` e `JWT_SECRET` dos Secrets do repositório. Depois do script SSH, um step consulta `GET /health` na porta `3001` da EC2, com `curl --fail` e até 10 tentativas.
 
@@ -94,15 +96,15 @@ Os valores de `DB_USER`, `DB_PASSWORD` e `JWT_SECRET` devem ser os mesmos usados
 
 ## Validação pós-deploy
 
-O job `deploy-to-ec2` tem dois passos de validação automática: `script_stop: true` derruba o job se algum comando do script SSH falhar, e o step "Valida que a API respondeu" consulta `GET /health` (público) com `curl --fail`, tentando até 10 vezes com 3s de intervalo. Isso confirma que o processo da API subiu e responde, mas não que o login funciona (ver "Limitações"). A conferência completa continua manual:
+O job `deploy-to-ec2` tem dois passos de validação automática: `script_stop: true` derruba o job se algum comando do script SSH falhar, e o step "Valida que a API respondeu" consulta `GET /health` (público) com `curl --fail`, tentando até 10 vezes com 3s de intervalo. Como o `/health` consulta o banco (`SELECT 1`), o step também falha se a API não alcança o Postgres; ele não prova que o login funciona, o que fica a cargo do job `smoke-test` (ver "Smoke test"). A conferência manual equivalente:
 
-- `GET /health` deve retornar `{"status":"ok","projeto":"ConfigPanel"}`
+- `GET /health` deve retornar `{"status":"ok","projeto":"ConfigPanel","db":"up"}` (503 com `"db":"down"` se o banco não responder)
 - `GET /protocols` sem token deve retornar 401
 - `POST /auth/login` deve retornar 200 com token
 
 ## Smoke test
 
-[scripts/smoke.ps1](../scripts/smoke.ps1) automatiza a conferência pós-deploy: `GET /health`, `POST /auth/login` e `GET /protocols` com o token, esperando 200 nos três. Para cada passo imprime o horário (Brasília e UTC), método e caminho, status e tempo em ms; no fim, `SMOKE OK` (exit code 0) ou `SMOKE FALHOU` com o passo que falhou (exit code 1). Timeout de 10 s por requisição, sem retry. Não grava nada em disco e nunca imprime a senha nem o token.
+[scripts/smoke.ps1](../scripts/smoke.ps1) automatiza a conferência pós-deploy: `GET /health`, `POST /auth/login` e `GET /protocols` com o token, aceitando **qualquer status 2xx** em cada um. Para cada passo imprime o horário (Brasília e UTC), método e caminho, status e tempo em ms. A última linha é `SMOKE OK chamadas_2xx=N fim=[...] (tempo total: ...)` (exit code 0), com o número de chamadas 2xx e o horário de fim, ou `SMOKE FALHOU no passo: ...` (exit code 1). Para acrescentar um passo, o próprio script traz as instruções num comentário. Timeout de 10 s por requisição, sem retry. Não grava nada em disco e nunca imprime a senha nem o token.
 
 ```powershell
 $env:CONFIGPANEL_URL = "http://<EC2_HOST>:3001"   # ou use -BaseUrl
@@ -131,7 +133,8 @@ O shell expande a variável só dentro do documento enviado ao `psql`, então o 
 
 - **SSH aberto ao mundo (porta 22):** aceitável no ambiente de estudo; a autenticação depende só da chave.
 - **Sem rollback automático:** o container antigo é removido antes de validar o novo, o que causa indisponibilidade breve e deixa a API fora do ar se a imagem nova falhar. A imagem `latest` é sobrescrita a cada deploy; a tag com o SHA do commit permite voltar manualmente a uma versão anterior.
-- **`/health` não consulta o banco:** o step pós-deploy só valida que o processo da API responde. Se `DB_PASSWORD` (ou outra credencial do banco) divergir do que está no Postgres, o job fica verde e o login falha. Já aconteceu (ver devops-log, 06/10).
+- **Pool do `pg` sem `connectionTimeoutMillis`:** o `Pool` de `backend/src/database/connection.js` não limita o tempo de espera por uma conexão. Com o banco travado, uma requisição que usa o pool pode ficar pendurada sem erro. O `/health` não é afetado, porque tem timeout próprio de 2 s (`HEALTH_DB_TIMEOUT_MS`). Não corrigido.
+- **Credencial do banco divergente:** antes de o `/health` consultar o banco, o run #18 (06/10) ficou verde com `DB_PASSWORD` divergente do Postgres, e o erro só apareceu no login. Hoje o `/health` executa `SELECT 1` com a mesma credencial que a API usa, então uma divergência derruba o step pós-deploy (503). O job `smoke-test` confere também o login e uma rota protegida. Trocar o Secret continua não trocando a senha dentro do Postgres.
 - **IP público da EC2 não é fixo:** se a instância for reiniciada, o IP muda e o secret `EC2_HOST` precisa ser atualizado, ou o deploy deixa de conectar.
 - **Postgres sem volume nomeado e sem backup:** o container `configpanel-postgres` foi criado com `docker run` sem `-v` (conforme o histórico do shell da EC2 em 17/09), então os dados ficam num volume anônimo, sem nome para reaproveitar. Recriar o container deixa o banco antigo órfão (ou o perde, se o volume for removido), e não há backup.
 - **Migrations não rodam no pipeline:** o deploy não executa `npm run migrate`. Mudanças de schema precisam ser aplicadas à parte.
