@@ -82,20 +82,26 @@ function Invoke-Step {
     catch {
         $resp = $_.Exception.Response
         if ($resp) { $status = [int]$resp.StatusCode }
-        else { $errMsg = $_.Exception.Message }
+        else { $errMsg = $_.Exception.GetType().Name }
     }
     $sw.Stop()
     $ms = [int]$sw.Elapsed.TotalMilliseconds
     $shown = if ($null -ne $status) { "$status" } else { "sem resposta ($errMsg)" }
     Write-Host ('[{0}] {1} {2} -> {3} ({4} ms)' -f $stamp, $Method, $Path, $shown, $ms)
-    @{ Ok = ($status -eq 200); Status = $status; Body = $content }
+    @{ Ok = ($status -ge 200 -and $status -lt 300); Status = $status; Body = $content }
 }
 
 $total = [System.Diagnostics.Stopwatch]::StartNew()
 $failed = $null
+$calls2xx = 0
+
+# Para acrescentar um passo: copie um bloco abaixo (ex.: o de GET /protocols), ajuste
+# Method, Path, Headers e JsonBody, deixe-o em sequencia dentro de if (-not $failed)
+# e mantenha o aceite 2xx ($r.Ok) e o incremento de $calls2xx.
 
 # 1) GET /health
 $r = Invoke-Step -Method GET -Path '/health'
+if ($r.Ok) { $calls2xx++ }
 if (-not $r.Ok) { $failed = 'GET /health' }
 
 # 2) POST /auth/login
@@ -103,6 +109,7 @@ $token = $null
 if (-not $failed) {
     $body = @{ username = $user; password = $pass } | ConvertTo-Json -Compress
     $r = Invoke-Step -Method POST -Path '/auth/login' -JsonBody $body
+    if ($r.Ok) { $calls2xx++ }
     if ($r.Ok) {
         try { $token = ($r.Body | ConvertFrom-Json).token } catch { $token = $null }
         if ([string]::IsNullOrEmpty($token)) { $failed = 'POST /auth/login (resposta sem token)' }
@@ -113,14 +120,16 @@ if (-not $failed) {
 # 3) GET /protocols
 if (-not $failed) {
     $r = Invoke-Step -Method GET -Path '/protocols' -Headers @{ Authorization = "Bearer $token" }
+    if ($r.Ok) { $calls2xx++ }
     if (-not $r.Ok) { $failed = 'GET /protocols' }
 }
 
 $total.Stop()
+$fim = Get-Stamp
 $totalFmt = '{0:N1} s' -f $total.Elapsed.TotalSeconds
 if ($failed) {
     Write-Host "SMOKE FALHOU no passo: $failed (tempo total: $totalFmt)"
     exit 1
 }
-Write-Host "SMOKE OK (tempo total: $totalFmt)"
+Write-Host "SMOKE OK chamadas_2xx=$calls2xx fim=[$fim] (tempo total: $totalFmt)"
 exit 0
