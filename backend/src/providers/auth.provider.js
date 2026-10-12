@@ -1,10 +1,15 @@
 import jwt from 'jsonwebtoken';
 
 const SECRET_KEY = process.env.JWT_SECRET
-const EXPIRATION_TIME = '3h'; // Tempo de expiração do token (3 horas)
+const DEFAULT_EXPIRATION_TIME = '8h'; // Validade padrão do token (8 horas), usada se JWT_EXPIRES_IN não existir
+
+// Lida a cada chamada para respeitar a variável de ambiente (e permitir testar valores diferentes)
+function getExpirationTime() {
+    return process.env.JWT_EXPIRES_IN || DEFAULT_EXPIRATION_TIME;
+}
 
 export function generateToken(payload) {
-    return jwt.sign(payload, SECRET_KEY, { expiresIn: EXPIRATION_TIME });
+    return jwt.sign(payload, SECRET_KEY, { expiresIn: getExpirationTime() });
 }
 
 export function verifyToken(token) {
