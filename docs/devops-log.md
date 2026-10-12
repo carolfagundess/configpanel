@@ -406,3 +406,15 @@ Run 24/09: id 36039412142. Run 04/10: id 37245387841, merge às 23:53:36 UTC, co
 **Evidência:** PR #8; PR #9; runs 37713239762 e 37714902588.
 **Métrica (se aplicável):** run 37714902588: 1m41s (jobs: 33s / 9s / 21s / 28s); do run criado até o smoke OK ≈ 1m59s. Run 37713239762: 1m38s. Ambos são ensaio e ficam fora das amostras oficiais.
 **Observações:** (1) o `/health` ainda não consulta o banco (M3b). (2) Os comandos de verificação (variáveis de ambiente, atualização do repositório) são contados à parte dos de deploy. (3) O ensaio manual ainda está pendente. (4) Nenhuma senha ou token é registrado neste log.
+
+## [2026-10-11] PR #10 mergeado sem [skip ci]: run #34 fora da PoC
+
+**Fase da trilha:** Transversal (preparação do DevOps-6)
+**Contexto:** registrar um erro de procedimento no merge do PR #10 e o que fica por repetir. Horários em Brasília (UTC-3).
+**O que foi feito:**
+- O PR #10 foi mergeado sem `[skip ci]` por erro de procedimento. O merge gerou o run #34 na `main` (commit `5738138`), com deploy na EC2.
+- Esse run **não é amostra da PoC**.
+- O teste do `[skip ci]` será repetido com o próximo merge só de documentação.
+**Evidência:** PR #10; run #34 (commit `5738138`).
+**Métrica (se aplicável):** não se aplica; run fora das amostras da PoC.
+**Observações:** nenhum valor de segredo é registrado neste log.
