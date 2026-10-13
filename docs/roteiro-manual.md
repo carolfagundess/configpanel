@@ -65,7 +65,7 @@ Tipos: **D** = comando de deploy, **P** = preparação/verificação (contados s
 
 ## Como preencher a ficha
 - Início da amostra: a hora do commit de merge, lida com `git log -1 --format=%cI <sha>` (se vier em UTC, subtrair 3 h). O relógio do site e o print são só conferência.
-- tempo_total_s: do início da amostra (acima) até o horário do último 200 do smoke mais a duração dele (Get-History e log do smoke em BRT; o history da EC2 está em UTC, subtrair 3 h). Na modalidade pipeline, o mesmo intervalo: do merge ao último 200 do smoke.
+- tempo_total_s: do início da amostra (acima) até o horário do último 200 do smoke mais a duração dele (Get-History e log do smoke em BRT; o history da EC2 está em UTC, subtrair 3 h). Na modalidade pipeline, o mesmo intervalo: do início da amostra (hora do commit de merge, via git log -1 --format=%cI) ao último 200 do smoke.
 - comandos: soma dos D (PC + EC2, incluindo ssh); erro digitado ou retentativa = 1 intervenção + 1 comando extra.
 - intervencoes: tudo fora do roteiro. dados_sensiveis_manuais: senhas/chaves digitadas à mão.
 - chamadas_smoke: chamadas 2xx do smoke naquele incremento (núcleo 3 + 1 por incremento).
