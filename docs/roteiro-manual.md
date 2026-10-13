@@ -9,14 +9,14 @@ Tipos: **D** = comando de deploy, **P** = preparação/verificação (contados s
 - `docker version --format '{{.Server.Version}}'` e `aws sts get-caller-identity --query Account --output text` funcionando.
 - Código do incremento pronto, com teste Jest passando, em PR aberto e verde. O desenvolvimento não é medido.
 - Conferir que o commit da ramificação do PR NÃO contém [skip ci] (senão os checks do PR ficam "Pending").
-- Definir `$EC2_IP = "<IP_DA_EC2>"` (a usuária troca pelo IP real no terminal, nunca no arquivo). Fazer isto antes de iniciar o relógio.
+- Definir `$EC2_IP = "<IP_DA_EC2>"` (troque pelo IP real no terminal, nunca no arquivo). Fazer isto antes de iniciar o relógio.
 - Preencher na ficha: id, cenario, modalidade, image_version (a do último run do pipeline), arquivos_alterados, linhas_alteradas, testes_novos (do git diff --stat do PR).
 
 ## Merge (marca o início do relógio)
 1. No PR: Squash and merge.
 2. Digitar à mão ` [skip ci]` no fim do TÍTULO do commit de merge.
 3. Conferir o texto (colchetes, minúsculas) antes de confirmar. Confirmar.
-4. Anotar o horário do merge (BRT, mostrado na página do PR) e o SHA do commit de merge.
+4. Anotar o SHA do commit de merge (será usado no C4). A hora de início oficial é a do commit, lida no C4; o horário da página do PR é só conferência.
 5. Conferir na aba Actions, depois de ~2 minutos, que NÃO apareceu execução nova na main. Se aparecer, registrar como intervenção e a amostra deixa de ser válida.
 
 ## Parte A: PC (PowerShell, na raiz do repo)  [relógio começou no merge]
@@ -54,7 +54,7 @@ Tipos: **D** = comando de deploy, **P** = preparação/verificação (contados s
 | B11 | P | `docker logs --tail 20 configpanel-backend` |
 | B12 | P | `curl http://localhost:3001/health` (esperado: status ok, db up) |
 | B13 | D | `rm ~/backend.env` |
-| B14 | P | `history \| tail -n 40` (copie só a partir do B1 e troque o IP e o ID da conta por <IP_DA_EC2> e <ID_DA_CONTA>; depois `exit`) |
+| B14 | P | `history \| tail -n 40` (copie só a partir do B1 e troque o IP e o ID da conta por `<IP_DA_EC2>` e `<ID_DA_CONTA>`; depois `exit`) |
 
 ## Parte C: aceite (PowerShell no PC)  [relógio termina no SMOKE OK]
 | # | Tipo | Comando |
@@ -62,6 +62,7 @@ Tipos: **D** = comando de deploy, **P** = preparação/verificação (contados s
 | C1 | P | `$env:CONFIGPANEL_URL = "http://${EC2_IP}:3001"; $env:SMOKE_USER = "smoke.teste"` |
 | C2 | P | `.\scripts\smoke.ps1` (senha no prompt = 1 dado sensível manual) |
 | C3 | P | `Get-History \| Select-Object Id,StartExecutionTime,EndExecutionTime,CommandLine \| Format-Table -AutoSize -Wrap` (anote o Id do A1 e copie só dali em diante; descarte a linha do $EC2_IP) |
+| C4 | P | `git log -1 --format=%cI <sha_do_merge>` (hora de início da amostra; se vier em UTC, subtrair 3 h; na modalidade pipeline, use o sha_merge da ficha) |
 
 ## Como preencher a ficha
 - Início da amostra: a hora do commit de merge, lida com `git log -1 --format=%cI <sha>` (se vier em UTC, subtrair 3 h). O relógio do site e o print são só conferência.
