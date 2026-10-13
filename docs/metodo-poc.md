@@ -140,8 +140,8 @@ O tempo total é descritivo: se empatar ou o pipeline for mais lento, isso é re
 - **Cache do Docker:** build de 0,7 s no treino; nas amostras só a camada `COPY . .` é refeita.
 - **Operadora única, autora do pipeline** (conflito de interesse declarado); n=5 por modalidade, sem inferência estatística; resultados reportados como valores individuais e medianas.
 - **Enquadramento:** estudo de caso (Runeson & Höst, 2009), sem generalização estatística.
-- **Dependências com vulnerabilidades conhecidas:** o `npm audit` aponta 28 vulnerabilidades (22 moderate, 5 high, 1 critical). Não foram corrigidas, para não alterar a API fora do escopo da PoC; o ambiente fica congelado.
-- **Desvio entre o relógio do GitHub e o do PC:** o início da amostra vem do commit de merge (GitHub) e o fim, do smoke (PC). Um desvio entre os dois relógios entra direto no tempo medido; por isso o início é lido com `git log -1 --format=%cI` e o relógio do site serve só de conferência.
+- **Dependências com vulnerabilidades conhecidas:** o `npm audit` aponta 28 vulnerabilidades (22 moderate, 5 high, 1 critical). Não foram corrigidas: atualizar dependências alteraria a camada npm install da imagem durante a coleta e fugiria do escopo da PoC.
+- **Desvio entre o relógio do GitHub e o do PC:** o início da amostra vem do commit de merge (servidor do GitHub) e o fim, do smoke (PC). O desvio do relógio do PC em relação a uma referência de rede é medido uma vez, antes da coleta, e declarado aqui; o relógio do site serve só de conferência.
 
 ## 10. Cronograma
 

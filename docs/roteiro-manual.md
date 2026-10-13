@@ -62,7 +62,7 @@ Tipos: **D** = comando de deploy, **P** = preparação/verificação (contados s
 | C1 | P | `$env:CONFIGPANEL_URL = "http://${EC2_IP}:3001"; $env:SMOKE_USER = "smoke.teste"` |
 | C2 | P | `.\scripts\smoke.ps1` (senha no prompt = 1 dado sensível manual) |
 | C3 | P | `Get-History \| Select-Object Id,StartExecutionTime,EndExecutionTime,CommandLine \| Format-Table -AutoSize -Wrap` (anote o Id do A1 e copie só dali em diante; descarte a linha do $EC2_IP) |
-| C4 | P | `git log -1 --format=%cI <sha_do_merge>` (hora de início da amostra; se vier em UTC, subtrair 3 h; na modalidade pipeline, use o sha_merge da ficha) |
+| C4 | P | `git log -1 --format=%cI <sha_do_merge>` (hora de início da amostra; se vier em UTC, subtrair 3 h; na modalidade pipeline, use o sha_merge da ficha; manual: use $SHA, definido no A10) |
 
 ## Como preencher a ficha
 - Início da amostra: a hora do commit de merge, lida com `git log -1 --format=%cI <sha>` (se vier em UTC, subtrair 3 h). O relógio do site e o print são só conferência.
