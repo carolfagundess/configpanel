@@ -137,11 +137,11 @@ O tempo total é descritivo: se empatar ou o pipeline for mais lento, isso é re
 - **Incrementos de código diferentes entre amostras:** o molde fixo limita, mas não elimina, a variação de tamanho e de complexidade entre as rotas.
 - **Pool de conexões sem `connectionTimeoutMillis`:** o `Pool` do `pg` (`backend/src/database/connection.js`) não limita o tempo de espera por conexão. Com o banco travado, uma requisição que usa o pool pode ficar pendurada, sem erro. O `/health` não sofre disso porque tem timeout próprio (2 s). Limitação registrada, não corrigida, para não alterar a API fora do escopo da PoC.
 - **Efeito de prática:** ensaio de 11/10 = 709 s; piloto = 431 s; treino ~315 s (estimativa: 254 s + ~60 s do intervalo entre merge e A1). Favorece o manual.
-- **Cache do Docker:** build de 0,7 s no treino; nas amostras só a camada `COPY . .` é refeita.
+- **Cache do Docker:** build de 0,7 s no treino; nas amostras só a camada `COPY . .` é refeita. Favorece o manual: o job build-docker do pipeline não usa cache de camadas (ci.yml), então o runner constrói do zero a cada execução.
 - **Operadora única, autora do pipeline** (conflito de interesse declarado); n=5 por modalidade, sem inferência estatística; resultados reportados como valores individuais e medianas.
 - **Enquadramento:** estudo de caso (Runeson & Höst, 2009), sem generalização estatística.
 - **Dependências com vulnerabilidades conhecidas:** o `npm audit` aponta 28 vulnerabilidades (22 moderate, 5 high, 1 critical). Não foram corrigidas: atualizar dependências alteraria a camada npm install da imagem durante a coleta e fugiria do escopo da PoC.
-- **Desvio entre o relógio do GitHub e o do PC:** o início da amostra vem do commit de merge (servidor do GitHub) e o fim, do smoke (PC). O desvio do relógio do PC em relação a uma referência de rede é medido uma vez, antes da coleta, e declarado aqui; o relógio do site serve só de conferência.
+- **Desvio entre o relógio do GitHub e o do PC:** o início da amostra vem do commit de merge (servidor do GitHub) e o fim, do smoke (PC). O desvio do relógio do PC em relação a uma referência de rede é medido uma vez, antes da coleta, e declarado aqui; o relógio do site serve só de conferência. Medição de 13/10/2026 às 20:53: o relógio do PC estava cerca de 3 s atrasado em relação a time.windows.com (+2,96 s, +2,96 s e +2,95 s em 3 amostras). Só afeta as amostras manuais, cujo fim vem do smoke rodando no PC. Corrigido com w32tm /resync; desvio depois da correção: X s.
 
 ## 10. Cronograma
 
