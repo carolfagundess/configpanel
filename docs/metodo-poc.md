@@ -139,7 +139,9 @@ O tempo total é descritivo: se empatar ou o pipeline for mais lento, isso é re
 - **Efeito de prática:** ensaio de 11/10 = 709 s; piloto = 431 s; treino ~315 s (estimativa: 254 s + ~60 s do intervalo entre merge e A1). Favorece o manual.
 - **Cache do Docker:** build de 0,7 s no treino; nas amostras só a camada `COPY . .` é refeita.
 - **Operadora única, autora do pipeline** (conflito de interesse declarado); n=5 por modalidade, sem inferência estatística; resultados reportados como valores individuais e medianas.
-- **Enquadramento:** estudo de caso (Runeson & Höst, 2009).
+- **Enquadramento:** estudo de caso (Runeson & Höst, 2009), sem generalização estatística.
+- **Dependências com vulnerabilidades conhecidas:** o `npm audit` aponta 28 vulnerabilidades (22 moderate, 5 high, 1 critical). Não foram corrigidas, para não alterar a API fora do escopo da PoC; o ambiente fica congelado.
+- **Desvio entre o relógio do GitHub e o do PC:** o início da amostra vem do commit de merge (GitHub) e o fim, do smoke (PC). Um desvio entre os dois relógios entra direto no tempo medido; por isso o início é lido com `git log -1 --format=%cI` e o relógio do site serve só de conferência.
 
 ## 10. Cronograma
 

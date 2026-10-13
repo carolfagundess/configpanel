@@ -334,7 +334,7 @@ Continuação da entrada de 18/09. O job `deploy-to-ec2` rodou três vezes no PR
 
 **Execução 2 (24/09), falha: `dial tcp ***:22: i/o timeout`.** Com a chave aceita, a conexão nem abria: o Security Group `configpanel-sg` liberava a porta 22 só para o IP doméstico, e o runner do GitHub Actions usa outros IPs. Correção: nova regra SSH com origem `0.0.0.0/0` (aceitável no ambiente de estudo; a autenticação continua dependendo da chave). Na primeira tentativa a regra restrita foi sobrescrita por engano em vez de ganhar uma regra nova. Foi restaurada como regra separada, com o IP atual. Security Group final: 5 regras de entrada.
 
-**Execução 3 (24/09), sucesso.** Job `deploy-to-ec2` concluído em 25s (run do PR, evento pull_request; no run de main disparado pelo merge, mais tarde no mesmo dia, o job levou 22s) ("Successfully executed commands to all host") e os 4 jobs verdes. Validação funcional via Postman contra `http://3.19.14.99:3001`:
+**Execução 3 (24/09), sucesso.** Job `deploy-to-ec2` concluído em 25s (run do PR, evento pull_request; no run de main disparado pelo merge, mais tarde no mesmo dia, o job levou 22s) ("Successfully executed commands to all host") e os 4 jobs verdes. Validação funcional via Postman contra `http://<IP_DA_EC2>:3001`:
 - `GET /protocols/` sem token → 401 "Token inválido ou expirado" (proteção de rota ativa após o deploy)
 - `POST /auth/login` → 200 OK com token JWT
 
