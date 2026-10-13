@@ -443,3 +443,18 @@ Run 24/09: id 36039412142. Run 04/10: id 37245387841, merge às 23:53:36 UTC, co
 
 Run #38: criado 01:18:37, fim 01:20:48. Run #40: criado 01:40:14, fim 01:42:12. Os dois terminaram com sucesso nos 5 jobs, com o job de smoke como último.
 **Observações:** (1) o run #38 é o primeiro com `environment: production`; o tempo total maior inclui a espera entre jobs e não deve ser lido como regressão. (2) Nenhum valor de segredo é registrado neste log.
+
+## [2026-10-12] PR #19, proteção da main, PR #20, pg_dump e piloto manual
+
+**Fase da trilha:** Transversal (preparação do DevOps-6)
+**Contexto:** registrar o que ocorreu em 12/10 depois dos PRs #15 a #17, antes das coletas oficiais. Horários em BRT, salvo indicação.
+**O que foi feito:**
+- PR #19: `scripts/coleta-pipeline.ps1`, que gera a linha da ficha a partir de um run do pipeline. Testado nas runs #38 e #40.
+- Proteção da main: ruleset `proteger-main`, criado às 13:33, com 4 regras (PR obrigatório, checks `test-backend` e `build-docker`, bloqueio de force push, bloqueio de exclusão), sem bypass.
+- PR #20: a validade do token JWT lê `JWT_EXPIRES_IN`, com padrão 8h. 2 arquivos, +64 -3, 4 testes novos (183 -> 187). Merge às 13:59:59 com `[skip ci]`, sem execução do pipeline.
+- `pg_dump` de 12/10 às 13:39 (`-Fc`, 20462 bytes, 55 itens), guardado fora do repositório.
+- Piloto manual (descartado, não é amostra): 20 comandos (15 + 5 extras), 3 intervenções, 1 dado sensível. Do merge (13:59:59) ao fim do smoke (14:07:10) = 431 s.
+- Treino manual às 21:04 (não é amostra): 15 comandos D, 0 extras, 0 intervenções, 254 s de A1 ao fim do smoke (o piloto levou 365 s no mesmo trecho).
+**Evidência:** PRs #19 e #20; runs #38 e #40; ruleset `proteger-main`; dump `-Fc` fora do repositório.
+**Métrica (se aplicável):** piloto 431 s (merge ao fim do smoke); treino 254 s (A1 ao fim do smoke). Nenhum dos dois entra nas 10 amostras.
+**Observações:** (1) o treino e o piloto alimentam o efeito de prática descrito em `docs/metodo-poc.md` (seção 9). (2) Nenhum IP nem ID de conta AWS é registrado neste log.

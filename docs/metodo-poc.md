@@ -136,6 +136,10 @@ O tempo total é descritivo: se empatar ou o pipeline for mais lento, isso é re
 - **Testes:** o manual precisa rodar os testes para a comparação ser justa (ou reportar os dois cenários).
 - **Incrementos de código diferentes entre amostras:** o molde fixo limita, mas não elimina, a variação de tamanho e de complexidade entre as rotas.
 - **Pool de conexões sem `connectionTimeoutMillis`:** o `Pool` do `pg` (`backend/src/database/connection.js`) não limita o tempo de espera por conexão. Com o banco travado, uma requisição que usa o pool pode ficar pendurada, sem erro. O `/health` não sofre disso porque tem timeout próprio (2 s). Limitação registrada, não corrigida, para não alterar a API fora do escopo da PoC.
+- **Efeito de prática:** ensaio de 11/10 = 709 s; piloto = 431 s; treino ~315 s (estimativa: 254 s + ~60 s do intervalo entre merge e A1). Favorece o manual.
+- **Cache do Docker:** build de 0,7 s no treino; nas amostras só a camada `COPY . .` é refeita.
+- **Operadora única, autora do pipeline** (conflito de interesse declarado); n=5 por modalidade, sem inferência estatística; resultados reportados como valores individuais e medianas.
+- **Enquadramento:** estudo de caso (Runeson & Höst, 2009).
 
 ## 10. Cronograma
 
