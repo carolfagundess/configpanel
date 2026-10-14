@@ -10,7 +10,7 @@ Tipos: **D** = comando de deploy, **P** = preparação/verificação (contados s
 - Código do incremento pronto, com teste Jest passando, em PR aberto e verde. O desenvolvimento não é medido.
 - Conferir que o commit da ramificação do PR NÃO contém [skip ci] (senão os checks do PR ficam "Pending").
 - Definir `$EC2_IP = "<IP_DA_EC2>"` (troque pelo IP real no terminal, nunca no arquivo). Fazer isto antes de iniciar o relógio.
-- Só nas amostras manuais: conferir o relógio do PC com `w32tm /stripchart /computer:time.windows.com /samples:1 /dataonly` (desvio menor que 1 s; senão, `w32tm /resync` em PowerShell de administradora, e repetir). Isto fica fora do relógio e não conta como comando.
+- Só nas amostras manuais: conferir o relógio do PC com `w32tm /stripchart /computer:time.windows.com /samples:1 /dataonly` (anote o desvio medido, em segundos, nas observações da ficha; a coluna tempo_total_s guarda o valor bruto e o desvio é somado só na análise). Isto fica fora do relógio e não conta como comando.
 - Preencher na ficha: id, cenario, modalidade, image_version (a do último run do pipeline), arquivos_alterados, linhas_alteradas, testes_novos (do git diff --stat do PR).
 
 ## Merge (marca o início do relógio)
