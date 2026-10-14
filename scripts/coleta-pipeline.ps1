@@ -371,7 +371,7 @@ try {
     # Observacoes.
     $obs = New-Object System.Collections.Generic.List[string]
     if ($NaoEhAmostra) { $obs.Add('Fora das amostras') }
-    $textoRun = "Run #$($run.number): $(Format-Duracao $duracaoRun) ate o fim do run"
+    $textoRun = "Run #$($run.number)"
     if ($fimSmokeTexto) { $textoRun += ", fim do smoke $fimSmokeTexto BRT" }
     $obs.Add($textoRun)
     $obs.Add('testes_novos e estimativa (linhas + com it( ou test( em backend/tests/*.test.js)')
