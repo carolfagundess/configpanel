@@ -1,7 +1,23 @@
+import net from 'node:net';
 import * as ProtocolsModel from '../models/Protocols.model.js';
 
 const VALID_TOPOLOGIES_UNIFIQUE = ['GPON', 'PTP'];
 const VALID_DELIVERY_METHODS = ['trunk', 'ip_publico', 'equipamento'];
+const VALID_IP_CATEGORIES = ['gerencia', 'bloco', 'ptp'];
+const VALID_IP_OWNERSHIPS = ['unifique', 'last_mile'];
+
+/**
+ * Aceita IPv4, IPv6 ou CIDR (ip/prefixo), com no máximo 100 caracteres (limite da coluna ips.address).
+ */
+function isValidIpOrCidr(value) {
+    if (typeof value !== 'string' || value.length === 0 || value.length > 100) return false;
+    const [ip, prefix, ...rest] = value.split('/');
+    if (rest.length > 0) return false;
+    const version = net.isIP(ip);
+    if (!version) return false;
+    if (prefix === undefined) return true;
+    return /^\d{1,3}$/.test(prefix) && Number(prefix) <= (version === 4 ? 32 : 128);
+}
 
 /**
  * Determina se a topologia será Unifique ou LastMile,
@@ -185,5 +201,42 @@ export async function updateProtocol(req, res) {
     }
 }
 
+/**
+ * POST /protocols/:id/ips
+ * Registra um IP no protocolo (RF07). Corpo: { address, category, ownership? }.
+ */
+export async function createProtocolIp(req, res) {
+    const { id } = req.params;
+    const { address, category, ownership } = req.body ?? {};
 
+    if (!address || !category) {
+        return res.status(400).json({ error: 'Campos obrigatórios ausentes: address, category.' });
+    }
+    if (!isValidIpOrCidr(address)) {
+        return res.status(400).json({ error: 'address inválido. Informe um IPv4, IPv6 ou CIDR.' });
+    }
+    if (!VALID_IP_CATEGORIES.includes(category)) {
+        return res.status(400).json({
+            error: `category inválida. Valores aceitos: ${VALID_IP_CATEGORIES.join(', ')}.`,
+        });
+    }
+    if (ownership !== undefined && !VALID_IP_OWNERSHIPS.includes(ownership)) {
+        return res.status(400).json({
+            error: `ownership inválido. Valores aceitos: ${VALID_IP_OWNERSHIPS.join(', ')}.`,
+        });
+    }
 
+    try {
+        const ip = await ProtocolsModel.createIp(id, { address, category, ownership });
+        if (!ip) {
+            return res.status(404).json({ error: `Protocolo com id ${id} não encontrado.` });
+        }
+        return res.status(201).json(ip);
+    } catch (err) {
+        if (err.code === '22P02') {
+            return res.status(400).json({ error: `Formato de id inválido: ${id}.` });
+        }
+        console.error('Erro ao registrar IP do protocolo:', err);
+        return res.status(500).json({ error: 'Erro interno ao registrar IP do protocolo.' });
+    }
+}

@@ -1,12 +1,15 @@
 <#
 .SYNOPSIS
-  Smoke test do ConfigPanel: /health, /auth/login e /protocols.
+  Smoke test do ConfigPanel: /health, /auth/login, /protocols e POST /protocols/<id>/ips.
 
 .DESCRIPTION
-  Roda tres requisicoes em sequencia e imprime, para cada uma, o horario
+  Roda quatro requisicoes em sequencia e imprime, para cada uma, o horario
   (Brasilia e UTC), metodo e caminho, status e tempo em ms. Sem retry e com
   timeout de 10 s por requisicao. Nao grava nada em disco e nunca imprime
   a senha nem o token.
+
+  O passo 4 grava de verdade um IP (192.0.2.1, faixa de documentacao RFC 5737) no protocolo de teste
+  de client_name "SMOKE TESTE", localizado na lista do passo 3. Se esse protocolo nao existir, o smoke falha.
 
   Credenciais: $env:SMOKE_USER e $env:SMOKE_PASS; se faltarem, pede com Read-Host.
   Exit code: 0 se tudo passou, 1 se algum passo falhou.
@@ -118,10 +121,31 @@ if (-not $failed) {
 }
 
 # 3) GET /protocols
+$listaBody = $null
 if (-not $failed) {
-    $r = Invoke-Step -Method GET -Path '/protocols' -Headers @{ Authorization = "Bearer $token" }
+    $r = Invoke-Step -Method GET -Path '/protocols?limit=200' -Headers @{ Authorization = "Bearer $token" }
     if ($r.Ok) { $calls2xx++ }
     if (-not $r.Ok) { $failed = 'GET /protocols' }
+    else { $listaBody = $r.Body }
+}
+
+# 4) POST /protocols/<id>/ips (grava de verdade no protocolo de teste "SMOKE TESTE")
+if (-not $failed) {
+    $smokeId = $null
+    try {
+        $smokeProt = @(($listaBody | ConvertFrom-Json).rows) | Where-Object { $_.client_name -ceq 'SMOKE TESTE' } | Select-Object -First 1
+        if ($smokeProt) { $smokeId = [string]$smokeProt.id }
+    }
+    catch { $smokeId = $null }
+    if ([string]::IsNullOrEmpty($smokeId)) {
+        $failed = 'POST /protocols/<id>/ips (protocolo "SMOKE TESTE" nao encontrado em GET /protocols)'
+    }
+    else {
+        $body = @{ address = '192.0.2.1'; category = 'gerencia' } | ConvertTo-Json -Compress
+        $r = Invoke-Step -Method POST -Path "/protocols/$smokeId/ips" -Headers @{ Authorization = "Bearer $token" } -JsonBody $body
+        if ($r.Ok) { $calls2xx++ }
+        if (-not $r.Ok) { $failed = 'POST /protocols/<id>/ips' }
+    }
 }
 
 $total.Stop()
