@@ -85,18 +85,18 @@ function Format-Duracao {
 }
 
 # Converte o "fim" impresso pelo smoke (UTC) em data/hora UTC.
-# O smoke atual imprime "UTC AAAA-MM-DD HH:mm:ss.fff" (com data); se so vier a hora, assume o dia da
-# criacao do run e soma 1 dia quando o resultado ficaria antes da criacao (virada de dia em UTC).
+# O smoke atual imprime "UTC AAAA-MM-DD HH:mm:ss.fff" (com data); se so vier a hora, assume o dia do
+# inicio da amostra (commit de merge) e soma 1 dia quando o resultado ficaria antes dele (virada de dia em UTC).
 function Get-FimUtc {
-    param([string]$Data, [string]$Hora, [datetime]$CriacaoUtc)
+    param([string]$Data, [string]$Hora, [datetime]$InicioUtc)
     if ($Data) {
         $formatos = [string[]]@('yyyy-MM-dd HH:mm:ss.FFFFFFF', 'yyyy-MM-dd HH:mm:ss')
         $estilo = [System.Globalization.DateTimeStyles]::AssumeUniversal -bor [System.Globalization.DateTimeStyles]::AdjustToUniversal
         return [datetime]::ParseExact(($Data + ' ' + $Hora), $formatos, $inv, $estilo)
     }
     $hora = [timespan]::Parse($Hora, $inv)
-    $candidato = $CriacaoUtc.Date.Add($hora)
-    if ($candidato -lt $CriacaoUtc) { $candidato = $candidato.AddDays(1) }
+    $candidato = $InicioUtc.Date.Add($hora)
+    if ($candidato -lt $InicioUtc) { $candidato = $candidato.AddDays(1) }
     return $candidato
 }
 
@@ -152,6 +152,12 @@ function Get-TestesNovos {
     return [pscustomobject]@{ Total = $total; ArquivosTeste = $arquivosTeste; SemPatch = $semPatch }
 }
 
+# Segundos entre dois instantes, arredondados (metade para longe do zero).
+function Get-SegundosArred {
+    param([datetime]$Ini, [datetime]$Fim)
+    return [int][math]::Round(($Fim - $Ini).TotalSeconds, 0, [MidpointRounding]::AwayFromZero)
+}
+
 function Format-CsvCampo {
     param($Valor)
     $s = if ($null -eq $Valor) { '' } else { [string]$Valor }
@@ -170,20 +176,28 @@ if ($AutoTeste) {
     }
     Write-Host 'Autoteste de coleta-pipeline.ps1'
 
-    # Virada de dia: criado 23:59:30 UTC, fim 00:01:10 (so a hora) => dia seguinte, 100 s depois.
+    # O inicio da amostra e a hora do commit de merge (committer date), nao a criacao do run.
+    # Virada de dia: commit 23:59:30 UTC, fim 00:01:10 (so a hora) => dia seguinte, 100 s depois.
     $c = ConvertTo-UtcDate '2026-10-11T23:59:30Z'
-    $fim = Get-FimUtc -Data '' -Hora '00:01:10.000' -CriacaoUtc $c
+    $fim = Get-FimUtc -Data '' -Hora '00:01:10.000' -InicioUtc $c
     Assert-Igual 'virada de dia (so hora): data do fim' '2026-10-12 00:01:10' $fim.ToString('yyyy-MM-dd HH:mm:ss', $inv)
     Assert-Igual 'virada de dia (so hora): segundos' '100' (($fim - $c).TotalSeconds)
     # Mesmo caso, com a data presente no fim (formato atual do smoke).
-    $fim = Get-FimUtc -Data '2026-10-12' -Hora '00:01:10.000' -CriacaoUtc $c
+    $fim = Get-FimUtc -Data '2026-10-12' -Hora '00:01:10.000' -InicioUtc $c
     Assert-Igual 'virada de dia (com data): segundos' '100' (($fim - $c).TotalSeconds)
-    # Sem virada: criado 01:40:14, fim 01:42:09.738 no mesmo dia.
-    $c2 = ConvertTo-UtcDate '2026-10-12T01:40:14Z'
-    $fim = Get-FimUtc -Data '' -Hora '01:42:09.738' -CriacaoUtc $c2
+    # Virada com atraso: commit 23:59:30, run criado 00:00:05 do dia seguinte, fim 00:01:10 (so a hora).
+    $cr = ConvertTo-UtcDate '2026-10-12T00:00:05Z'
+    Assert-Igual 'virada com atraso: atraso merge->run' '35' (Get-SegundosArred $c $cr)
+    Assert-Igual 'virada com atraso: tempo_total_s (do commit)' '100' (Get-SegundosArred $c $fim)
+    # Sem virada: commit 01:39:50, run criado 01:40:14 (atraso 24 s), fim 01:42:09.738 no mesmo dia.
+    $c2 = ConvertTo-UtcDate '2026-10-12T01:39:50Z'
+    $cr2 = ConvertTo-UtcDate '2026-10-12T01:40:14Z'
+    $fim = Get-FimUtc -Data '' -Hora '01:42:09.738' -InicioUtc $c2
     Assert-Igual 'sem virada (so hora): data do fim' '2026-10-12 01:42:09' $fim.ToString('yyyy-MM-dd HH:mm:ss', $inv)
-    $fim = Get-FimUtc -Data '2026-10-12' -Hora '01:42:09.738' -CriacaoUtc $c2
-    Assert-Igual 'sem virada (com data): arredondado' '116' ([int][math]::Round(($fim - $c2).TotalSeconds, 0, [MidpointRounding]::AwayFromZero))
+    $fim = Get-FimUtc -Data '2026-10-12' -Hora '01:42:09.738' -InicioUtc $c2
+    Assert-Igual 'sem virada (com data): tempo_total_s do commit' '140' (Get-SegundosArred $c2 $fim)
+    Assert-Igual 'sem virada: atraso merge->run' '24' (Get-SegundosArred $c2 $cr2)
+    Assert-Igual 'sem virada: contado da criacao do run (regra antiga) seria' '116' (Get-SegundosArred $cr2 $fim)
     Assert-Igual 'BRT de 23:59:30 UTC' '2026-10-11 20:59:30' (ConvertTo-BrtTexto $c)
     Assert-Igual 'duracao 118 s' '1m58s' (Format-Duracao 118)
 
@@ -310,25 +324,36 @@ try {
         $avisos.Add("image_version diferente entre jobs: smoke=$imgSmoke; test-backend=$imgTeste")
     }
 
-    # Tempo total: criacao do run ate o fim impresso pelo smoke.
+    # Commit de merge: hora do commit (committer date), arquivos, linhas e testes novos.
+    $sha = [string]$run.headSha
+    $jq = '{c:.commit.committer.date,a:.stats.additions,d:.stats.deletions,files:[.files[]|{filename:.filename,patch:.patch}]}'
+    $commit = (Invoke-GhLeitura @('api', "repos/{owner}/{repo}/commits/$sha", '--jq', $jq)) | ConvertFrom-Json
+    $inicio = ConvertTo-UtcDate $commit.c
+
+    # Atraso entre o commit de merge e a criacao do run: so na tabela, fora do CSV.
+    $atrasoS = ($criacao - $inicio).TotalSeconds
+    $linhasTabela += [pscustomobject]@{
+        Etapa = 'atraso merge->run'; Resultado = ''
+        'Inicio (BRT)' = (ConvertTo-BrtTexto $inicio 'HH:mm:ss'); 'Fim (BRT)' = (ConvertTo-BrtTexto $criacao 'HH:mm:ss')
+        'Duracao' = (Format-Duracao $atrasoS)
+    }
+    if ($atrasoS -lt 0) { $avisos.Add('commit de merge posterior a criacao do run (relogios?): conferir') }
+
+    # Tempo total: hora do commit de merge ate o fim impresso pelo smoke.
     $tempoTotal = ''
     $fimSmokeTexto = ''
     if ($smoke -and $smoke.Ok -and $smoke.FimHora) {
-        $fimSmoke = Get-FimUtc -Data $smoke.FimData -Hora $smoke.FimHora -CriacaoUtc $criacao
-        $totalS = ($fimSmoke - $criacao).TotalSeconds
-        $tempoTotal = [int][math]::Round($totalS, 0, [MidpointRounding]::AwayFromZero)
+        $fimSmoke = Get-FimUtc -Data $smoke.FimData -Hora $smoke.FimHora -InicioUtc $inicio
+        $totalS = ($fimSmoke - $inicio).TotalSeconds
+        $tempoTotal = Get-SegundosArred $inicio $fimSmoke
         $fimSmokeTexto = (ConvertTo-BrtTexto $fimSmoke 'HH:mm:ss.f').Replace('.', ',')
         $linhasTabela += [pscustomobject]@{
-            Etapa = 'TOTAL (criacao ate o fim do smoke)'; Resultado = 'smoke ok'
-            'Inicio (BRT)' = (ConvertTo-BrtTexto $criacao 'HH:mm:ss'); 'Fim (BRT)' = (ConvertTo-BrtTexto $fimSmoke 'HH:mm:ss')
+            Etapa = 'TOTAL (commit de merge ate o fim do smoke)'; Resultado = 'smoke ok'
+            'Inicio (BRT)' = (ConvertTo-BrtTexto $inicio 'HH:mm:ss'); 'Fim (BRT)' = (ConvertTo-BrtTexto $fimSmoke 'HH:mm:ss')
             'Duracao' = (Format-Duracao $totalS)
         }
     }
 
-    # Commit: arquivos, linhas e testes novos.
-    $sha = [string]$run.headSha
-    $jq = '{a:.stats.additions,d:.stats.deletions,files:[.files[]|{filename:.filename,patch:.patch}]}'
-    $commit = (Invoke-GhLeitura @('api', "repos/{owner}/{repo}/commits/$sha", '--jq', $jq)) | ConvertFrom-Json
     $arquivos = @($commit.files)
     $linhasAlteradas = [int]$commit.a + [int]$commit.d
     $testes = Get-TestesNovos $arquivos $padraoArquivoTeste $padraoLinhaTeste
@@ -358,7 +383,7 @@ try {
         id                      = $Id
         cenario                 = $Cenario
         modalidade              = 'pipeline'
-        data_hora_inicio_brt    = (ConvertTo-BrtTexto $criacao)
+        data_hora_inicio_brt    = (ConvertTo-BrtTexto $inicio)
         commit                  = $sha.Substring(0, 7)
         run_id                  = $RunId
         ambiente                = 'GitHub Actions'
