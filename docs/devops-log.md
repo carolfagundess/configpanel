@@ -458,3 +458,20 @@ Run #38: criado 01:18:37, fim 01:20:48. Run #40: criado 01:40:14, fim 01:42:12. 
 **Evidência:** PRs #19 e #20; runs #38 e #40; ruleset `proteger-main`; dump `-Fc` fora do repositório.
 **Métrica (se aplicável):** piloto 431 s (merge ao fim do smoke); treino 254 s (A1 ao fim do smoke). Nenhum dos dois entra nas 10 amostras.
 **Observações:** (1) o treino e o piloto alimentam o efeito de prática descrito em `docs/metodo-poc.md` (seção 9). (2) Nenhum IP nem ID de conta AWS é registrado neste log.
+
+## [2026-10-15] Amostra 1 (pipeline): PR #23, run #54 e smoke com escrita real
+
+**Fase da trilha:** Transversal (DevOps-6, coleta da PoC)
+**Contexto:** registrar a primeira amostra da modalidade pipeline: o incremento `POST /protocols/:id/ips` (RF07) e o passo 4 do smoke. Horários em BRT, salvo indicação.
+**O que foi feito:**
+- PR #23 mergeado: commit de merge `5b37881` às 22:24:54, **sem** `[skip ci]` (amostra de pipeline).
+- Run #54 (id 38834988650): 5 jobs com sucesso. **120 s** do commit de merge ao fim do smoke (fim do smoke às 22:26:54,2).
+- O smoke passou a ter **4 chamadas**. A 4ª é uma **escrita real**: `POST /protocols/<id>/ips` com `192.0.2.1` (faixa RFC 5737, reservada para documentação) e categoria `gerencia`, no protocolo dedicado `SMOKE-0001` / "SMOKE TESTE". O smoke acha o protocolo pelo nome em `GET /protocols?limit=200` e falha com mensagem clara se não achar.
+- Decisão: **escrita real, sem `dry_run`** (opção descartada: parâmetro `dry_run`).
+- O protocolo "SMOKE TESTE" foi criado em produção, via API, em 15/10 por volta de 22:22. É a **única alteração de dados em produção**; não houve novo segredo nem variável de ambiente.
+- As linhas em `ips` **acumulam** a cada execução do smoke e serão removidas por SQL ao fim da coleta.
+- `scripts/smoke.ps1` foi alterado de propósito (smoke cumulativo: cada amostra acrescenta 1 passo). O hash congelado antigo (`1d7fee9`) **deixa de valer**. O novo é `5b37881`, obtido com `git log -1 --format=%h -- scripts/smoke.ps1`.
+- Homologação local feita pela autora antes do merge: 192 testes Jest, smoke duas vezes seguidas e erros 400/401/404 cobertos.
+**Evidência:** PR #23; commit `5b37881`; run #54 (id 38834988650); linha `1` de `docs/ficha-coleta.csv`.
+**Métrica (se aplicável):** tempo_total_s = 120 (commit de merge ao fim do smoke); 4 chamadas 2xx; 5 arquivos alterados, 206 linhas alteradas, 5 testes novos.
+**Observações:** (1) o smoke cumulativo muda dados de produção de forma controlada (ver `docs/metodo-poc.md`, seção 1.1). (2) Nenhum IP real da EC2 nem valor de segredo é registrado neste log.

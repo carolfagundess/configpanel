@@ -1,3 +1,4 @@
 id,cenario,modalidade,data_hora_inicio_brt,commit,run_id,ambiente,tempo_total_s,comandos,intervencoes,dados_sensiveis_manuais,falha,tipo_falha,smoke_ok,observacoes,chamadas_smoke,image_version,nao_e_amostra,sha_merge,arquivos_alterados,linhas_alteradas,testes_novos
 ENSAIO-M,ensaio,manual,2026-10-11 12:48:14,97cb055,,PC+EC2 (casa),709,15,2,1,sim,testes (DB_HOST),sim,"Fora das amostras. Tempo inclui ~4 min de pausa e esperas de conversa; 7 cmds PC + 8 EC2 de deploy (+1 digitacao errada); verificacao contada a parte",3,,sim,,,,
 ENSAIO-P,ensaio,pipeline,2026-10-07 22:50:23,,37714902588,GitHub Actions,119,0,0,0,nao,,sim,"Fora das amostras. Run #26: 1m41s ate o fim do run, ultimo 200 do smoke 22:52:21,5",3,,sim,,,,
+1,,pipeline,2026-10-15 22:24:54,5b37881,38834988650,GitHub Actions,120,0,0,0,nao,,sim,"Run #54, fim do smoke 22:26:54,2 BRT. testes_novos e estimativa (linhas + com it( ou test( em backend/tests/*.test.js)",4,20261012.334.1,nao,5b37881,5,206,5

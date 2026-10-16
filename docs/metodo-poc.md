@@ -34,6 +34,8 @@ Em que medida a adoção de práticas DevOps (Docker, GitHub Actions e AWS) melh
 | 11/10 | O smoke aceita **qualquer 2xx** (não só 200) e imprime `chamadas_2xx` e o horário de fim na última linha. |
 | 11/10 | O congelamento vale para o **ambiente** (EC2, banco, `runs-on`, versões e front-end em branch), não para o código da API, que muda a cada amostra. |
 
+**Smoke cumulativo (15/10).** O smoke é cumulativo: cada amostra acrescenta 1 passo, então `scripts/smoke.ps1` muda de propósito ao longo da coleta e o hash congelado antigo deixa de valer. A amostra 1 introduziu a primeira escrita real, um `POST /protocols/<id>/ips` num protocolo dedicado (`SMOKE-0001`, "SMOKE TESTE"). Isso muda dados de produção de forma controlada: o protocolo foi criado uma vez, via API, e as linhas gravadas em `ips` acumulam a cada execução e serão removidas por SQL ao fim da coleta.
+
 ## 2. Definições operacionais
 
 - **Deploy bem-sucedido** (igual nas duas modalidades), verificado por um script de smoke:
