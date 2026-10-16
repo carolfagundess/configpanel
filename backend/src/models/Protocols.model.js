@@ -175,3 +175,27 @@ export async function update(id, changes) {
 
     return updated;
 }
+
+/**
+ * Registra um IP (gerência, bloco ou PTP) em um protocolo (RF07).
+ *
+ * @param {string} protocolId
+ * @param {object} ip
+ * @param {string} ip.address
+ * @param {string} ip.category - 'gerencia' | 'bloco' | 'ptp'
+ * @param {string} [ip.ownership] - 'unifique' (padrão) | 'last_mile'
+ * @returns Promise<object | null> - o IP criado, ou null se o protocolo não existe
+ */
+export async function createIp(protocolId, { address, category, ownership }) {
+    const protocol = await findById(protocolId);
+    if (!protocol) {
+        return null; // deixa o controller tratar como 404
+    }
+
+    const { rows } = await pool.query(
+        `INSERT INTO ips (protocol_id, address, category, ownership)
+         VALUES ($1, $2, $3, $4) RETURNING *`,
+        [protocolId, address, category, ownership ?? 'unifique']
+    );
+    return rows[0];
+}
