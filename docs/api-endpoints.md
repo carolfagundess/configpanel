@@ -13,6 +13,7 @@ Backend Node.js/Express. Porta padrão: `3001` (variável `PORT`). Todas as requ
 | GET    | `/protocols`      | Sim  | Lista protocolos (paginação/filtro)|
 | GET    | `/protocols/:id`  | Sim  | Busca protocolo por ID             |
 | PATCH  | `/protocols/:id`  | Sim  | Atualiza protocolo / muda status   |
+| POST   | `/protocols/:id/ips` | Sim | Registra um IP no protocolo     |
 
 ## Autenticação
 
@@ -175,6 +176,33 @@ O conteúdo de `user` é o payload decodificado do JWT.
 **Exemplo**
 ```json
 { "status": "EM_ANALISE" }
+```
+
+### `POST /protocols/:id/ips`
+
+🔒 Requer token. Registra um IP (gerência, bloco ou PTP) em um protocolo existente (RF07).
+
+**Body**
+
+| Campo       | Tipo   | Obrigatório | Observações |
+|-------------|--------|-------------|-------------|
+| `address`   | string | Sim         | IPv4, IPv6 ou CIDR (`ip/prefixo`); no máximo 100 caracteres |
+| `category`  | string | Sim         | `gerencia`, `bloco` ou `ptp` |
+| `ownership` | string | Não         | `unifique` (padrão) ou `last_mile` |
+
+**Respostas**
+
+| Código | Situação |
+|--------|----------|
+| 201    | IP criado (retorna o objeto do IP) |
+| 400    | Corpo inválido (`address` ou `category` ausente ou inválido, `ownership` inválido); `id` fora do formato UUID |
+| 401    | Token ausente, inválido ou expirado |
+| 404    | Protocolo não encontrado |
+| 500    | Erro interno |
+
+**Exemplo**
+```json
+{ "address": "192.0.2.1", "category": "gerencia" }
 ```
 
 ---
