@@ -467,7 +467,7 @@ Run #38: criado 01:18:37, fim 01:20:48. Run #40: criado 01:40:14, fim 01:42:12. 
 - PR #23 mergeado: commit de merge `5b37881` às 22:24:54, **sem** `[skip ci]` (amostra de pipeline).
 - Run #54 (id 38834988650): 5 jobs com sucesso. **120 s** do commit de merge ao fim do smoke (fim do smoke às 22:26:54,2).
 - O smoke passou a ter **4 chamadas**. A 4ª é uma **escrita real**: `POST /protocols/<id>/ips` com `192.0.2.1` (faixa RFC 5737, reservada para documentação) e categoria `gerencia`, no protocolo dedicado `SMOKE-0001` / "SMOKE TESTE". O smoke acha o protocolo pelo nome em `GET /protocols?limit=200` e falha com mensagem clara se não achar.
-- Decisão: **escrita real, sem `dry_run`** (opção descartada: transação com rollback).
+- Decisão: **escrita real, sem `dry_run`** (opção descartada: parâmetro `dry_run`).
 - O protocolo "SMOKE TESTE" foi criado em produção, via API, em 15/10 por volta de 22:22. É a **única alteração de dados em produção**; não houve novo segredo nem variável de ambiente.
 - As linhas em `ips` **acumulam** a cada execução do smoke e serão removidas por SQL ao fim da coleta.
 - `scripts/smoke.ps1` foi alterado de propósito (smoke cumulativo: cada amostra acrescenta 1 passo). O hash congelado antigo (`1d7fee9`) **deixa de valer**. O novo é `5b37881`, obtido com `git log -1 --format=%h -- scripts/smoke.ps1`.
