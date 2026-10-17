@@ -240,3 +240,25 @@ export async function createProtocolIp(req, res) {
         return res.status(500).json({ error: 'Erro interno ao registrar IP do protocolo.' });
     }
 }
+
+/**
+ * GET /protocols/:id/ips
+ * Lista os IPs registrados no protocolo (RF07).
+ */
+export async function listProtocolIps(req, res) {
+    const { id } = req.params;
+
+    try {
+        const result = await ProtocolsModel.listIps(id);
+        if (!result) {
+            return res.status(404).json({ error: `Protocolo com id ${id} não encontrado.` });
+        }
+        return res.status(200).json(result);
+    } catch (err) {
+        if (err.code === '22P02') {
+            return res.status(400).json({ error: `Formato de id inválido: ${id}.` });
+        }
+        console.error('Erro ao listar IPs do protocolo:', err);
+        return res.status(500).json({ error: 'Erro interno ao listar IPs do protocolo.' });
+    }
+}

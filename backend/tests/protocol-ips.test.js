@@ -87,6 +87,54 @@ describe('POST /protocols/:id/ips', () => {
   });
 });
 
+describe('GET /protocols/:id/ips', () => {
+  it('deve listar os IPs do protocolo, incluindo o recém-criado (200)', async () => {
+    const created = await request(app)
+      .post(`/protocols/${protocolId}/ips`)
+      .set('Authorization', `Bearer ${testToken}`)
+      .send({ address: '192.0.2.20', category: 'bloco' });
+    expect(created.status).toBe(201);
+
+    const response = await request(app)
+      .get(`/protocols/${protocolId}/ips`)
+      .set('Authorization', `Bearer ${testToken}`);
+
+    expect(response.status).toBe(200);
+    expect(Array.isArray(response.body.rows)).toBe(true);
+    expect(response.body.total).toBe(response.body.rows.length);
+    expect(response.body.total).toBe(await countIps());
+
+    const found = response.body.rows.find((ip) => ip.id === created.body.id);
+    expect(found).toBeDefined();
+    expect(found.protocol_id).toBe(protocolId);
+    expect(found.address).toBe('192.0.2.20');
+    expect(found.category).toBe('bloco');
+  });
+
+  it('deve retornar 404 para protocolo inexistente', async () => {
+    const response = await request(app)
+      .get('/protocols/00000000-0000-0000-0000-000000000000/ips')
+      .set('Authorization', `Bearer ${testToken}`);
+
+    expect(response.status).toBe(404);
+  });
+
+  it('deve rejeitar requisição sem token (401)', async () => {
+    const response = await request(app).get(`/protocols/${protocolId}/ips`);
+
+    expect(response.status).toBe(401);
+  });
+
+  it('deve rejeitar id fora do formato UUID (400)', async () => {
+    const response = await request(app)
+      .get('/protocols/nao-e-uuid/ips')
+      .set('Authorization', `Bearer ${testToken}`);
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toMatch(/id/i);
+  });
+});
+
 afterAll(async () => {
   await pool.query("DELETE FROM ips WHERE protocol_id IN (SELECT id FROM protocols WHERE protocol_number LIKE 'TESTIP-%')");
   await pool.query("DELETE FROM protocols WHERE protocol_number LIKE 'TESTIP-%'");

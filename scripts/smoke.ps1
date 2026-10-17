@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-  Smoke test do ConfigPanel: /health, /auth/login, /protocols e POST /protocols/<id>/ips.
+  Smoke test do ConfigPanel: /health, /auth/login, /protocols, POST /protocols/<id>/ips e GET /protocols/<id>/ips.
 
 .DESCRIPTION
-  Roda quatro requisicoes em sequencia e imprime, para cada uma, o horario
+  Roda cinco requisicoes em sequencia e imprime, para cada uma, o horario
   (Brasilia e UTC), metodo e caminho, status e tempo em ms. Sem retry e com
   timeout de 10 s por requisicao. Nao grava nada em disco e nunca imprime
   a senha nem o token.
@@ -146,6 +146,13 @@ if (-not $failed) {
         if ($r.Ok) { $calls2xx++ }
         if (-not $r.Ok) { $failed = 'POST /protocols/<id>/ips' }
     }
+}
+
+# 5) GET /protocols/<id>/ips (lê os IPs do protocolo de teste "SMOKE TESTE", reaproveitando o id do passo 4)
+if (-not $failed) {
+    $r = Invoke-Step -Method GET -Path "/protocols/$smokeId/ips" -Headers @{ Authorization = "Bearer $token" }
+    if ($r.Ok) { $calls2xx++ }
+    if (-not $r.Ok) { $failed = 'GET /protocols/<id>/ips' }
 }
 
 $total.Stop()

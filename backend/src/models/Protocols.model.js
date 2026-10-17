@@ -199,3 +199,22 @@ export async function createIp(protocolId, { address, category, ownership }) {
     );
     return rows[0];
 }
+
+/**
+ * Lista os IPs de um protocolo (RF07), do mais recente para o mais antigo.
+ *
+ * @param {string} protocolId
+ * @returns Promise<{ rows: object[], total: number } | null> - null se o protocolo não existe
+ */
+export async function listIps(protocolId) {
+    const protocol = await findById(protocolId);
+    if (!protocol) {
+        return null; // deixa o controller tratar como 404
+    }
+
+    const { rows } = await pool.query(
+        'SELECT * FROM ips WHERE protocol_id = $1 ORDER BY created_at DESC',
+        [protocolId]
+    );
+    return { rows, total: rows.length };
+}
