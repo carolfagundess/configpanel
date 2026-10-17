@@ -218,3 +218,22 @@ export async function listIps(protocolId) {
     );
     return { rows, total: rows.length };
 }
+
+/**
+ * Lista os equipamentos de um protocolo, do mais recente para o mais antigo.
+ *
+ * @param {string} protocolId
+ * @returns Promise<{ rows: object[], total: number } | null> - null se o protocolo não existe
+ */
+export async function listEquipment(protocolId) {
+    const protocol = await findById(protocolId);
+    if (!protocol) {
+        return null; // deixa o controller tratar como 404
+    }
+
+    const { rows } = await pool.query(
+        'SELECT * FROM equipment WHERE protocol_id = $1 ORDER BY created_at DESC',
+        [protocolId]
+    );
+    return { rows, total: rows.length };
+}
