@@ -15,6 +15,7 @@ Backend Node.js/Express. Porta padrão: `3001` (variável `PORT`). Todas as requ
 | PATCH  | `/protocols/:id`  | Sim  | Atualiza protocolo / muda status   |
 | POST   | `/protocols/:id/ips` | Sim | Registra um IP no protocolo     |
 | GET    | `/protocols/:id/ips` | Sim | Lista os IPs do protocolo       |
+| POST   | `/protocols/:id/equipamentos` | Sim | Registra um equipamento no protocolo |
 | GET    | `/protocols/:id/equipamentos` | Sim | Lista os equipamentos do protocolo |
 
 ## Autenticação
@@ -227,9 +228,41 @@ Cada item de `rows` é uma linha da tabela `ips` (`id`, `protocol_id`, `address`
 | 404    | Protocolo não encontrado |
 | 500    | Erro interno |
 
+### `POST /protocols/:id/equipamentos`
+
+🔒 Requer token. Registra um equipamento em um protocolo existente (RF08).
+
+**Body**
+
+| Campo           | Tipo   | Obrigatório | Observações |
+|-----------------|--------|-------------|-------------|
+| `model`         | string | Sim         | Texto não vazio; no máximo 255 caracteres (após remover espaços das pontas) |
+| `serial_number` | string | Sim         | Texto não vazio; no máximo 100 caracteres (após remover espaços das pontas) |
+| `mac_address`   | string | Sim         | 12 dígitos hexadecimais; é normalizado (ver abaixo) |
+| `ownership`     | string | Não         | `unifique` (padrão) ou `last_mile` |
+
+`model` e `serial_number` são gravados sem os espaços das pontas.
+
+**Normalização do MAC:** aceita os separadores `:`, `-` e `.` (ou nenhum), em maiúsculas ou minúsculas, e grava sempre no formato `AA:BB:CC:DD:EE:FF`. Por exemplo, `aa-bb-cc-dd-ee-ff`, `0011.2233.4455` e `a1b2c3d4e5f6` viram `AA:BB:CC:DD:EE:FF`, `00:11:22:33:44:55` e `A1:B2:C3:D4:E5:F6`. Se não sobrarem exatamente 12 dígitos hexadecimais, retorna 400.
+
+**Respostas**
+
+| Código | Situação |
+|--------|----------|
+| 201    | Equipamento criado (retorna o objeto do equipamento, com `mac_address` normalizado) |
+| 400    | `model`, `serial_number` ou `mac_address` ausente, vazio ou que não é texto; `model` ou `serial_number` acima do limite; `mac_address` inválido; `ownership` inválido; `id` fora do formato UUID |
+| 401    | Token ausente, inválido ou expirado |
+| 404    | Protocolo não encontrado |
+| 500    | Erro interno |
+
+**Exemplo**
+```json
+{ "model": "ONU-01", "serial_number": "SN-0001", "mac_address": "aa-bb-cc-dd-ee-ff" }
+```
+
 ### `GET /protocols/:id/equipamentos`
 
-🔒 Requer token. Lista os equipamentos registrados em um protocolo existente, ordenados por `created_at` decrescente.
+🔒 Requer token. Lista os equipamentos registrados em um protocolo existente (RF08), ordenados por `created_at` decrescente.
 
 **200 OK**
 ```json
