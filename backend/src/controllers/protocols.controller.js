@@ -262,3 +262,25 @@ export async function listProtocolIps(req, res) {
         return res.status(500).json({ error: 'Erro interno ao listar IPs do protocolo.' });
     }
 }
+
+/**
+ * GET /protocols/:id/equipamentos
+ * Lista os equipamentos registrados no protocolo.
+ */
+export async function listProtocolEquipment(req, res) {
+    const { id } = req.params;
+
+    try {
+        const result = await ProtocolsModel.listEquipment(id);
+        if (!result) {
+            return res.status(404).json({ error: `Protocolo com id ${id} não encontrado.` });
+        }
+        return res.status(200).json(result);
+    } catch (err) {
+        if (err.code === '22P02') {
+            return res.status(400).json({ error: `Formato de id inválido: ${id}.` });
+        }
+        console.error('Erro ao listar equipamentos do protocolo:', err);
+        return res.status(500).json({ error: 'Erro interno ao listar equipamentos do protocolo.' });
+    }
+}
