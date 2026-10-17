@@ -15,6 +15,7 @@ Backend Node.js/Express. Porta padrão: `3001` (variável `PORT`). Todas as requ
 | PATCH  | `/protocols/:id`  | Sim  | Atualiza protocolo / muda status   |
 | POST   | `/protocols/:id/ips` | Sim | Registra um IP no protocolo     |
 | GET    | `/protocols/:id/ips` | Sim | Lista os IPs do protocolo       |
+| GET    | `/protocols/:id/equipamentos` | Sim | Lista os equipamentos do protocolo |
 
 ## Autenticação
 
@@ -221,6 +222,26 @@ Cada item de `rows` é uma linha da tabela `ips` (`id`, `protocol_id`, `address`
 | Código | Situação |
 |--------|----------|
 | 200    | Lista de IPs (vazia se o protocolo não tem IPs) |
+| 400    | `id` fora do formato UUID |
+| 401    | Token ausente, inválido ou expirado |
+| 404    | Protocolo não encontrado |
+| 500    | Erro interno |
+
+### `GET /protocols/:id/equipamentos`
+
+🔒 Requer token. Lista os equipamentos registrados em um protocolo existente, ordenados por `created_at` decrescente.
+
+**200 OK**
+```json
+{ "rows": [ { "...": "equipamento" } ], "total": 1 }
+```
+Cada item de `rows` é uma linha da tabela `equipment` (`id`, `protocol_id`, `model`, `serial_number`, `mac_address`, `ownership`, `created_at`). `total` é o número de itens retornados (`rows.length`); não há paginação.
+
+**Respostas**
+
+| Código | Situação |
+|--------|----------|
+| 200    | Lista de equipamentos (vazia se o protocolo não tem equipamentos) |
 | 400    | `id` fora do formato UUID |
 | 401    | Token ausente, inválido ou expirado |
 | 404    | Protocolo não encontrado |
