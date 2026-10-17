@@ -490,3 +490,27 @@ Run #38: criado 01:18:37, fim 01:20:48. Run #40: criado 01:40:14, fim 01:42:12. 
 **Evidência:** PR #25; commit `6a6e5ac`; linha `2` de `docs/ficha-coleta.csv`.
 **Métrica (se aplicável):** tempo_total_s = 393 (392,89 s corrigido); 19 comandos; 4 intervenções; 5 chamadas 2xx.
 **Observações:** (1) o desvio do relógio varia de dia para dia e passou a ser medido por amostra (ver `docs/metodo-poc.md`). (2) Nenhum IP real da EC2, ID de conta AWS nem valor de segredo é registrado neste log.
+
+## [2026-10-16] Amostra 3 (pipeline): PR #27, run #60 e GET /protocols/:id/equipamentos
+
+**Fase da trilha:** Transversal (DevOps-6, coleta da PoC)
+**Contexto:** registrar a terceira amostra, a segunda da modalidade pipeline: o incremento `GET /protocols/:id/equipamentos` e o passo 6 do smoke. Horários em BRT, salvo indicação.
+**O que foi feito:**
+- PR #27 mergeado: commit de merge `06378b7` às 22:37:23, **sem** `[skip ci]` (amostra de pipeline). Atraso entre o merge e o início do run: 3 s.
+- Run #60 (id 38991651375): 5 jobs com sucesso. **112 s** do commit de merge ao fim do smoke (fim do smoke às 22:39:15,0).
+
+| Job | Duração |
+|-----|---------|
+| test-backend | 35 s |
+| build-docker | 14 s |
+| push-to-ecr | 16 s |
+| Deploy to EC2 | 24 s |
+| Smoke test | 12 s |
+
+- O smoke passou a ter **6 chamadas**, todas 2xx. A 6ª é `GET /protocols/<id>/equipamentos`, no protocolo `SMOKE TESTE`.
+- 5 arquivos alterados, 152 linhas alteradas (+149 -3), 5 testes novos (201 no total).
+- Homologação local pelo Postman. O primeiro GET devolveu **404 do Express**: o container do backend (imagem `node:24-alpine` com a pasta montada) estava com o código antigo carregado e foi preciso `docker-compose restart backend`. Depois do restart, a rota devolveu 200 `{rows:[],total:0}`.
+- `scripts/smoke.ps1` foi alterado de propósito (smoke cumulativo: cada amostra acrescenta 1 passo). O hash congelado passa a ser `06378b7`, obtido com `git log -1 --format=%h -- scripts/smoke.ps1`.
+**Evidência:** PR #27; commit `06378b7`; run #60 (id 38991651375); linha `3` de `docs/ficha-coleta.csv`.
+**Métrica (se aplicável):** tempo_total_s = 112 (commit de merge ao fim do smoke); 6 chamadas 2xx; 5 arquivos alterados, 152 linhas alteradas, 5 testes novos.
+**Observações:** (1) o 404 da homologação veio de código antigo carregado no container, não da rota; a lição é reiniciar o backend após mudar o código montado. (2) Nenhum IP real da EC2, ID de conta AWS nem valor de segredo é registrado neste log.
