@@ -475,3 +475,18 @@ Run #38: criado 01:18:37, fim 01:20:48. Run #40: criado 01:40:14, fim 01:42:12. 
 **Evidência:** PR #23; commit `5b37881`; run #54 (id 38834988650); linha `1` de `docs/ficha-coleta.csv`.
 **Métrica (se aplicável):** tempo_total_s = 120 (commit de merge ao fim do smoke); 4 chamadas 2xx; 5 arquivos alterados, 206 linhas alteradas, 5 testes novos.
 **Observações:** (1) o smoke cumulativo muda dados de produção de forma controlada (ver `docs/metodo-poc.md`, seção 1.1). (2) Nenhum IP real da EC2 nem valor de segredo é registrado neste log.
+
+## [2026-10-16] Amostra 2 (manual): PR #25, GET /protocols/:id/ips e desvios do roteiro
+
+**Fase da trilha:** Transversal (DevOps-6, coleta da PoC)
+**Contexto:** registrar a segunda amostra, a primeira da modalidade manual: o incremento `GET /protocols/:id/ips` (RF07) e o passo 5 do smoke. Horários em BRT, salvo indicação.
+**O que foi feito:**
+- PR #25 mergeado: commit de merge `6a6e5ac`, com `[skip ci]` (sem execução do pipeline; o deploy foi manual).
+- Amostra 2 (manual), iniciada às 21:58:30 (A1, 69 s após o commit de merge, pela leitura do SHA): **393 s** do início ao fim do smoke (22:05:02,9), **19 comandos**, **4 intervenções**, 1 dado sensível manual. O smoke passou a ter **5 chamadas**, todas 2xx.
+- Build do Docker em 1 s (camadas em cache).
+- 5 arquivos alterados, 103 linhas alteradas, 4 testes novos.
+- Desvios do roteiro: (1) referência de relógio **a.ntp.br**, além de time.windows.com, medida antes e depois da amostra; (2) **w32time parado** durante a amostra; (3) relógio do PC **corrigido por `Set-Date`** às 21:10; (4) `EC2_IP` sem aspas no preparo (Id 7); (5) o `ssh` falhou 2 vezes com host vazio (Ids 23-24, o 23 conta como A15), seguidos de redefinição da variável (Id 25) e `ssh` ok (Id 26); (6) typo `smoke.ps` sem o 1 (Id 28). Um comando solto de `ssh` na janela de administrador ficou fora do histórico do deploy e não foi contado.
+- Correção de relógio: desvio de -0,0506 s antes (21:55:25) e -0,068 s depois (22:07:44), média -0,059 s (negativo = PC adiantado). Tempo bruto 392,946 s, corrigido 392,89 s.
+**Evidência:** PR #25; commit `6a6e5ac`; linha `2` de `docs/ficha-coleta.csv`.
+**Métrica (se aplicável):** tempo_total_s = 393 (392,89 s corrigido); 19 comandos; 4 intervenções; 5 chamadas 2xx.
+**Observações:** (1) o desvio do relógio varia de dia para dia e passou a ser medido por amostra (ver `docs/metodo-poc.md`). (2) Nenhum IP real da EC2, ID de conta AWS nem valor de segredo é registrado neste log.
