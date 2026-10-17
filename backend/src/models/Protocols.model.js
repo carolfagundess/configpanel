@@ -237,3 +237,28 @@ export async function listEquipment(protocolId) {
     );
     return { rows, total: rows.length };
 }
+
+/**
+ * Registra um equipamento em um protocolo.
+ *
+ * @param {string} protocolId
+ * @param {object} equipment
+ * @param {string} equipment.model
+ * @param {string} equipment.serial_number
+ * @param {string} equipment.mac_address - já normalizado (AA:BB:CC:DD:EE:FF)
+ * @param {string} [equipment.ownership] - 'unifique' (padrão) | 'last_mile'
+ * @returns Promise<object | null> - o equipamento criado, ou null se o protocolo não existe
+ */
+export async function createEquipment(protocolId, { model, serial_number, mac_address, ownership }) {
+    const protocol = await findById(protocolId);
+    if (!protocol) {
+        return null; // deixa o controller tratar como 404
+    }
+
+    const { rows } = await pool.query(
+        `INSERT INTO equipment (protocol_id, model, serial_number, mac_address, ownership)
+         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+        [protocolId, model, serial_number, mac_address, ownership ?? 'unifique']
+    );
+    return rows[0];
+}
