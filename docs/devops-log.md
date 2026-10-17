@@ -518,7 +518,7 @@ Run #38: criado 01:18:37, fim 01:20:48. Run #40: criado 01:40:14, fim 01:42:12. 
 ## [2026-10-17] Amostra 4 (manual): PR #29, POST /protocols/:id/equipamentos e typo npm instal
 
 **Fase da trilha:** Transversal (DevOps-6, coleta da PoC)
-**Contexto:** registrar a quarta amostra, a terceira da modalidade manual: o incremento `POST /protocols/:id/equipamentos` (RF08) e o passo 7 do smoke. Horários em BRT, salvo indicação.
+**Contexto:** registrar a quarta amostra, a segunda da modalidade manual: o incremento `POST /protocols/:id/equipamentos` (RF08) e o passo 7 do smoke. Horários em BRT, salvo indicação.
 **O que foi feito:**
 - PR #29 mergeado: commit de merge `ad4ef17` às 09:14:21, com `[skip ci]` (sem execução do pipeline; o deploy foi manual). Confirmado: nenhum run de push em main; o run #62 é só do PR.
 - Amostra 4 (manual), iniciada às 09:14:21 (A1, 30 s após o commit de merge): **225 s** do início ao fim do smoke (09:18:05,9), **15 comandos**, **0 intervenções**, 1 dado sensível manual. Sem erros nem retentativas. O smoke passou a ter **7 chamadas**, todas 2xx (7/7).
