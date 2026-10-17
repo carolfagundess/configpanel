@@ -5,6 +5,7 @@ const VALID_TOPOLOGIES_UNIFIQUE = ['GPON', 'PTP'];
 const VALID_DELIVERY_METHODS = ['trunk', 'ip_publico', 'equipamento'];
 const VALID_IP_CATEGORIES = ['gerencia', 'bloco', 'ptp'];
 const VALID_IP_OWNERSHIPS = ['unifique', 'last_mile'];
+const VALID_EQUIPMENT_OWNERSHIPS = ['unifique', 'last_mile'];
 
 /**
  * Aceita IPv4, IPv6 ou CIDR (ip/prefixo), com no máximo 100 caracteres (limite da coluna ips.address).
@@ -17,6 +18,17 @@ function isValidIpOrCidr(value) {
     if (!version) return false;
     if (prefix === undefined) return true;
     return /^\d{1,3}$/.test(prefix) && Number(prefix) <= (version === 4 ? 32 : 128);
+}
+
+/**
+ * Normaliza um MAC para AA:BB:CC:DD:EE:FF. Aceita separadores ':', '-' e '.' (ou nenhum),
+ * em maiúsculas ou minúsculas. Devolve null se não sobrarem exatamente 12 dígitos hexadecimais.
+ */
+function normalizeMac(value) {
+    if (typeof value !== 'string') return null;
+    const hex = value.trim().replace(/[:\-.]/g, '');
+    if (!/^[0-9a-fA-F]{12}$/.test(hex)) return null;
+    return hex.toUpperCase().match(/.{2}/g).join(':');
 }
 
 /**
@@ -282,5 +294,56 @@ export async function listProtocolEquipment(req, res) {
         }
         console.error('Erro ao listar equipamentos do protocolo:', err);
         return res.status(500).json({ error: 'Erro interno ao listar equipamentos do protocolo.' });
+    }
+}
+
+/**
+ * POST /protocols/:id/equipamentos
+ * Registra um equipamento no protocolo. Corpo: { model, serial_number, mac_address, ownership? }.
+ * O mac_address é normalizado para AA:BB:CC:DD:EE:FF.
+ */
+export async function createProtocolEquipment(req, res) {
+    const { id } = req.params;
+    const { model, serial_number, mac_address, ownership } = req.body ?? {};
+
+    const isFilled = (value) => typeof value === 'string' && value.trim().length > 0;
+    if (!isFilled(model) || !isFilled(serial_number) || !isFilled(mac_address)) {
+        return res.status(400).json({
+            error: 'Campos obrigatórios ausentes ou inválidos: model, serial_number, mac_address (texto não vazio).',
+        });
+    }
+    if (model.trim().length > 255) {
+        return res.status(400).json({ error: 'model inválido. Máximo de 255 caracteres.' });
+    }
+    if (serial_number.trim().length > 100) {
+        return res.status(400).json({ error: 'serial_number inválido. Máximo de 100 caracteres.' });
+    }
+    const mac = normalizeMac(mac_address);
+    if (!mac) {
+        return res.status(400).json({ error: 'mac_address inválido. Informe 12 dígitos hexadecimais.' });
+    }
+    if (ownership !== undefined && !VALID_EQUIPMENT_OWNERSHIPS.includes(ownership)) {
+        return res.status(400).json({
+            error: `ownership inválido. Valores aceitos: ${VALID_EQUIPMENT_OWNERSHIPS.join(', ')}.`,
+        });
+    }
+
+    try {
+        const equipment = await ProtocolsModel.createEquipment(id, {
+            model: model.trim(),
+            serial_number: serial_number.trim(),
+            mac_address: mac,
+            ownership,
+        });
+        if (!equipment) {
+            return res.status(404).json({ error: `Protocolo com id ${id} não encontrado.` });
+        }
+        return res.status(201).json(equipment);
+    } catch (err) {
+        if (err.code === '22P02') {
+            return res.status(400).json({ error: `Formato de id inválido: ${id}.` });
+        }
+        console.error('Erro ao registrar equipamento do protocolo:', err);
+        return res.status(500).json({ error: 'Erro interno ao registrar equipamento do protocolo.' });
     }
 }
