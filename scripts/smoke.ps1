@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-  Smoke test do ConfigPanel: /health, /auth/login, /protocols, POST /protocols/<id>/ips, GET /protocols/<id>/ips, GET /protocols/<id>/equipamentos e POST /protocols/<id>/equipamentos.
+  Smoke test do ConfigPanel: /health, /auth/login, /protocols, POST /protocols/<id>/ips, GET /protocols/<id>/ips, GET /protocols/<id>/equipamentos, POST /protocols/<id>/equipamentos e POST /protocols/<id>/comunicacoes.
 
 .DESCRIPTION
-  Roda sete requisicoes em sequencia e imprime, para cada uma, o horario
+  Roda oito requisicoes em sequencia e imprime, para cada uma, o horario
   (Brasilia e UTC), metodo e caminho, status e tempo em ms. Sem retry e com
   timeout de 10 s por requisicao. Nao grava nada em disco e nunca imprime
   a senha nem o token.
@@ -11,6 +11,7 @@
   O passo 4 grava de verdade um IP (192.0.2.1, faixa de documentacao RFC 5737) no protocolo de teste
   de client_name "SMOKE TESTE", localizado na lista do passo 3. Se esse protocolo nao existir, o smoke falha.
   O passo 7 grava de verdade um equipamento (SMOKE-ONU, MAC 00:00:5E:00:53:01, faixa de documentacao RFC 7042) no mesmo protocolo.
+  O passo 8 grava de verdade uma comunicacao com o cliente (client_communications) no mesmo protocolo.
 
   Credenciais: $env:SMOKE_USER e $env:SMOKE_PASS; se faltarem, pede com Read-Host.
   Exit code: 0 se tudo passou, 1 se algum passo falhou.
@@ -169,6 +170,14 @@ if (-not $failed) {
     $r = Invoke-Step -Method POST -Path "/protocols/$smokeId/equipamentos" -Headers @{ Authorization = "Bearer $token" } -JsonBody $body
     if ($r.Ok) { $calls2xx++ }
     if (-not $r.Ok) { $failed = 'POST /protocols/<id>/equipamentos' }
+}
+
+# 8) POST /protocols/<id>/comunicacoes (grava de verdade no protocolo de teste "SMOKE TESTE", reaproveitando o id do passo 4)
+if (-not $failed) {
+    $body = @{ content = 'SMOKE: contato de teste do smoke test' } | ConvertTo-Json -Compress
+    $r = Invoke-Step -Method POST -Path "/protocols/$smokeId/comunicacoes" -Headers @{ Authorization = "Bearer $token" } -JsonBody $body
+    if ($r.Ok) { $calls2xx++ }
+    if (-not $r.Ok) { $failed = 'POST /protocols/<id>/comunicacoes' }
 }
 
 $total.Stop()
