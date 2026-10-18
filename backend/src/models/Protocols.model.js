@@ -262,3 +262,25 @@ export async function createEquipment(protocolId, { model, serial_number, mac_ad
     );
     return rows[0];
 }
+
+/**
+ * Registra uma comunicação com o cliente em um protocolo (RF09).
+ *
+ * @param {string} protocolId
+ * @param {object} communication
+ * @param {string} communication.content
+ * @returns Promise<object | null> - a comunicação criada, ou null se o protocolo não existe
+ */
+export async function createCommunication(protocolId, { content }) {
+    const protocol = await findById(protocolId);
+    if (!protocol) {
+        return null; // deixa o controller tratar como 404
+    }
+
+    const { rows } = await pool.query(
+        `INSERT INTO client_communications (protocol_id, content)
+         VALUES ($1, $2) RETURNING *`,
+        [protocolId, content]
+    );
+    return rows[0];
+}

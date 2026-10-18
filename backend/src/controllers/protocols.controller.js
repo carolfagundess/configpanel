@@ -347,3 +347,32 @@ export async function createProtocolEquipment(req, res) {
         return res.status(500).json({ error: 'Erro interno ao registrar equipamento do protocolo.' });
     }
 }
+
+/**
+ * POST /protocols/:id/comunicacoes
+ * Registra uma comunicação com o cliente no protocolo (RF09). Corpo: { content }.
+ */
+export async function createProtocolCommunication(req, res) {
+    const { id } = req.params;
+    const { content } = req.body ?? {};
+
+    if (typeof content !== 'string' || content.trim().length === 0) {
+        return res.status(400).json({
+            error: 'Campo obrigatório ausente ou inválido: content (texto não vazio).',
+        });
+    }
+
+    try {
+        const communication = await ProtocolsModel.createCommunication(id, { content: content.trim() });
+        if (!communication) {
+            return res.status(404).json({ error: `Protocolo com id ${id} não encontrado.` });
+        }
+        return res.status(201).json(communication);
+    } catch (err) {
+        if (err.code === '22P02') {
+            return res.status(400).json({ error: `Formato de id inválido: ${id}.` });
+        }
+        console.error('Erro ao registrar comunicação do protocolo:', err);
+        return res.status(500).json({ error: 'Erro interno ao registrar comunicação do protocolo.' });
+    }
+}
