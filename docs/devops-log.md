@@ -529,3 +529,27 @@ Run #38: criado 01:18:37, fim 01:20:48. Run #40: criado 01:40:14, fim 01:42:12. 
 **Evidência:** PR #29; commit `ad4ef17`; linha `4` de `docs/ficha-coleta.csv`.
 **Métrica (se aplicável):** tempo_total_s = 225 (224,90 s corrigido); 15 comandos; 0 intervenções; 7 chamadas 2xx; 5 arquivos alterados, 261 linhas alteradas, 8 testes novos.
 **Observações:** (1) o merge com `[skip ci]` não gera run de push em main, como esperado para a amostra manual. (2) Nenhum IP real da EC2, ID de conta AWS nem valor de segredo é registrado neste log.
+
+## [2026-10-18] Amostra 5 (pipeline): PR #31, run #66 e POST /protocols/:id/comunicacoes
+
+**Fase da trilha:** Transversal (DevOps-6, coleta da PoC)
+**Contexto:** registrar a quinta amostra, a terceira da modalidade pipeline: o incremento `POST /protocols/:id/comunicacoes` (RF09) e o passo 8 do smoke. Horários em BRT, salvo indicação.
+**O que foi feito:**
+- PR #31 mergeado: commit de merge `90333c3` às 19:50:03, **sem** `[skip ci]` (amostra de pipeline). Atraso entre o merge e o início do run: 2 s.
+- Run #66 (id 39173941886): 5 jobs com sucesso. **129 s** do commit de merge ao fim do smoke (fim do smoke às 19:52:11,5).
+
+| Job | Duração |
+|-----|---------|
+| test-backend | 38 s |
+| build-docker | 13 s |
+| push-to-ecr | 23 s |
+| Deploy to EC2 | 31 s |
+| Smoke test | 10 s |
+
+- O smoke passou a ter **8 chamadas**, todas 2xx (8/8, `chamadas_2xx=8`).
+- 5 arquivos alterados, 170 linhas alteradas (+167 -3), 6 testes novos (215 no total).
+- `image_version` 20261012.334.1.
+- Homologação local antes do merge pelo Postman (201/400/404/401) e smoke local 8/8.
+**Evidência:** PR #31; commit `90333c3`; run #66 (id 39173941886); linha `5` de `docs/ficha-coleta.csv`.
+**Métrica (se aplicável):** tempo_total_s = 129 (commit de merge ao fim do smoke); 8 chamadas 2xx; 5 arquivos alterados, 170 linhas alteradas, 6 testes novos.
+**Observações:** Nenhum IP real da EC2, ID de conta AWS nem valor de segredo é registrado neste log.

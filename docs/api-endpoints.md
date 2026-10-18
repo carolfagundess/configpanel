@@ -17,6 +17,7 @@ Backend Node.js/Express. Porta padrão: `3001` (variável `PORT`). Todas as requ
 | GET    | `/protocols/:id/ips` | Sim | Lista os IPs do protocolo       |
 | POST   | `/protocols/:id/equipamentos` | Sim | Registra um equipamento no protocolo |
 | GET    | `/protocols/:id/equipamentos` | Sim | Lista os equipamentos do protocolo |
+| POST   | `/protocols/:id/comunicacoes` | Sim | Registra uma comunicação com o cliente no protocolo |
 
 ## Autenticação
 
@@ -279,6 +280,33 @@ Cada item de `rows` é uma linha da tabela `equipment` (`id`, `protocol_id`, `mo
 | 401    | Token ausente, inválido ou expirado |
 | 404    | Protocolo não encontrado |
 | 500    | Erro interno |
+
+### `POST /protocols/:id/comunicacoes`
+
+🔒 Requer token. Registra uma comunicação com o cliente em um protocolo existente (RF09).
+
+**Body**
+
+| Campo     | Tipo   | Obrigatório | Observações |
+|-----------|--------|-------------|-------------|
+| `content` | string | Sim         | Texto não vazio após remover os espaços das pontas; gravado já aparado. Não há limite de tamanho |
+
+Campos extras no body são ignorados.
+
+**Respostas**
+
+| Código | Situação |
+|--------|----------|
+| 201    | Comunicação criada (retorna a linha com `id`, `protocol_id`, `content` e `created_at`) |
+| 400    | `content` ausente, vazio, só espaços ou que não é texto; `id` fora do formato UUID |
+| 401    | Token ausente, inválido ou expirado |
+| 404    | Protocolo não encontrado |
+| 500    | Erro interno |
+
+**Exemplo**
+```json
+{ "content": "Cliente contatado por telefone" }
+```
 
 ---
 

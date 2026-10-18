@@ -109,7 +109,7 @@ erDiagram
 
 - **Status** não é uma tabela nem um `ENUM` do banco: é `VARCHAR(50)` e a validação dos 12 estados e das transições fica na máquina de estados da aplicação (`backend/src/state-machine/protocol.state-machine.js`; veja [api-endpoints.md](api-endpoints.md)).
 - **`protocol_history.changed_by`** existe no schema, mas hoje a aplicação não o preenche. O `PATCH /protocols/:id` grava só `protocol_id`, `status` e `note` (texto `Transição: A → B`). O histórico, portanto, ainda não registra quem fez a mudança.
-- **`client_communications` e `checklist_items`** existem no schema, mas ainda não têm model nem endpoint. A regra de checklist completo ao sair da fase técnica está pendente.
-- **`ips` e `equipment`**: `ips` tem POST e GET (`/protocols/:id/ips`); `equipment` tem apenas GET (`/protocols/:id/equipamentos`), sem rota de criação ainda. A persistência e o `ownership` foram validados diretamente via SQL (ver [devops-log.md](devops-log.md), 09/09/2026).
+- **`client_communications` e `checklist_items`** existem no schema. `checklist_items` ainda não tem model nem endpoint. `client_communications` agora tem o `POST /protocols/:id/comunicacoes` (RF09); o GET continua não implementado. A regra de checklist completo ao sair da fase técnica está pendente.
+- **`ips` e `equipment`**: `ips` tem POST e GET (`/protocols/:id/ips`); `equipment` tem POST e GET (`/protocols/:id/equipamentos`). A persistência e o `ownership` foram validados diretamente via SQL (ver [devops-log.md](devops-log.md), 09/09/2026).
 - **Dados iniciais:** a migration 001 insere cinco serviços em `services`: Banda Larga, Dedicado, Interconexão, BGP e Wifi Business.
 - A tabela `users` não tem migration de seed. Usuários são criados fora do fluxo de migrations: `backend/scripts/gerar-hash.js <senha>` imprime o hash bcrypt, e o `INSERT` em `users` é feito manualmente.
