@@ -143,7 +143,7 @@ O tempo total é descritivo: se empatar ou o pipeline for mais lento, isso é re
 - **Operadora única, autora do pipeline** (conflito de interesse declarado); n=5 por modalidade, sem inferência estatística; resultados reportados como valores individuais e medianas.
 - **Enquadramento:** estudo de caso (Runeson & Höst, 2009), sem generalização estatística.
 - **Dependências com vulnerabilidades conhecidas:** o `npm audit` aponta 28 vulnerabilidades (22 moderate, 5 high, 1 critical). Não foram corrigidas: atualizar dependências alteraria a camada npm install da imagem durante a coleta e fugiria do escopo da PoC.
-- **Desvio entre o relógio do GitHub e o do PC:** o início da amostra vem do commit de merge (servidor do GitHub) e o fim, do smoke (PC). O desvio do relógio do PC em relação a uma referência de rede só afeta as amostras manuais, cujo fim vem do smoke rodando no PC; o relógio do site serve só de conferência. O desvio **varia de um dia para o outro**: +2,95 s em 13/10 (referência time.windows.com, nove medições entre +2,92 s e +2,96 s) e cerca de +1,06 s e depois +0,7 s em 16/10. Por isso ele é **medido antes e depois de cada amostra manual** com a.ntp.br e somado **individualmente, com sinal** (positivo = PC atrasado; negativo = PC adiantado) ao tempo bruto de cada amostra, e não mais declarado uma única vez. A sincronização pelas Configurações do Windows falhou, sem causa identificada. Em 16/10 o relógio do PC foi corrigido por `Set-Date`, pela mediana de 5 leituras, ficando um residual de cerca de ±0,05 s, com o w32time parado durante a amostra para o relógio não ser ajustado no meio da medição. Em 17/10 o desvio medido foi de -0,190 s, corrigido uma única vez por `Set-Date` com o w32time parado; as medições antes e depois da amostra 4 foram -0,0138 s e -0,0092 s.
+- **Desvio entre o relógio do GitHub e o do PC:** o início da amostra vem do commit de merge (servidor do GitHub) e o fim, do smoke (PC). O desvio do relógio do PC em relação a uma referência de rede só afeta as amostras manuais, cujo fim vem do smoke rodando no PC; o relógio do site serve só de conferência. O desvio **varia de um dia para o outro**: +2,95 s em 13/10 (referência time.windows.com, nove medições entre +2,92 s e +2,96 s) e cerca de +1,06 s e depois +0,7 s em 16/10. Por isso ele é **medido antes e depois de cada amostra manual** com a.ntp.br e somado **individualmente, com sinal** (positivo = PC atrasado; negativo = PC adiantado) ao tempo bruto de cada amostra, e não mais declarado uma única vez. A sincronização pelas Configurações do Windows falhou, sem causa identificada. Em 16/10 o relógio do PC foi corrigido por `Set-Date`, pela mediana de 5 leituras, ficando um residual de cerca de ±0,05 s, com o w32time parado durante a amostra para o relógio não ser ajustado no meio da medição. Em 17/10 o desvio medido foi de -0,190 s, corrigido uma única vez por `Set-Date` com o w32time parado; as medições antes e depois da amostra 4 foram -0,0138 s e -0,0092 s. Em 18/10 (amostra 6) o `w32time` **não foi parado**: foi feita uma ressincronização às 21:51 e o relógio ficou sob o controle normal do Windows. O offset médio foi de -0,0783 s (-0,0815 s antes, às cerca de 21:51, e -0,0751 s depois, às cerca de 22:04, a medição "depois" feita cerca de 5 min após o fim do smoke), somado com sinal ao tempo bruto.
 
 ## 10. Cronograma
 
@@ -152,9 +152,9 @@ O tempo total é descritivo: se empatar ou o pipeline for mais lento, isso é re
 | 08/10 | Orientação: pergunta aprovada; escopo e leitura B decididos |
 | 09 a 11/10 | M3b, script de smoke, roteiro manual, ficha CSV |
 | 13/10 | `runs-on` fixo, método fechado, piloto manual descartado |
-| 14 a 20/10 | 10 coletas (5 + 5, alternando) e testes de falha (a) e (b) |
-| 21/10 | Teste de falha (c) e recuperação |
-| 23/10 | Análise: tabelas e gráficos |
+| 14 a 21/10 (22/10 como reserva) | 10 coletas (5 + 5, alternando) e testes de falha (a) e (b) |
+| 22/10 | Teste de falha (c) e recuperação |
+| 23/10 | Análise: tabelas e gráficos; tag `v1.0-tcc` |
 
 ## 11. Material já disponível
 
