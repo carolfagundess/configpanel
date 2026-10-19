@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-  Smoke test do ConfigPanel: /health, /auth/login, /protocols, POST /protocols/<id>/ips, GET /protocols/<id>/ips, GET /protocols/<id>/equipamentos, POST /protocols/<id>/equipamentos e POST /protocols/<id>/comunicacoes.
+  Smoke test do ConfigPanel: /health, /auth/login, /protocols, POST /protocols/<id>/ips, GET /protocols/<id>/ips, GET /protocols/<id>/equipamentos, POST /protocols/<id>/equipamentos, POST /protocols/<id>/comunicacoes e GET /protocols/<id>/comunicacoes.
 
 .DESCRIPTION
-  Roda oito requisicoes em sequencia e imprime, para cada uma, o horario
+  Roda nove requisicoes em sequencia e imprime, para cada uma, o horario
   (Brasilia e UTC), metodo e caminho, status e tempo em ms. Sem retry e com
   timeout de 10 s por requisicao. Nao grava nada em disco e nunca imprime
   a senha nem o token.
@@ -12,6 +12,7 @@
   de client_name "SMOKE TESTE", localizado na lista do passo 3. Se esse protocolo nao existir, o smoke falha.
   O passo 7 grava de verdade um equipamento (SMOKE-ONU, MAC 00:00:5E:00:53:01, faixa de documentacao RFC 7042) no mesmo protocolo.
   O passo 8 grava de verdade uma comunicacao com o cliente (client_communications) no mesmo protocolo.
+  O passo 9 le as comunicacoes do mesmo protocolo e confere que a gravada no passo 8 aparece.
 
   Credenciais: $env:SMOKE_USER e $env:SMOKE_PASS; se faltarem, pede com Read-Host.
   Exit code: 0 se tudo passou, 1 se algum passo falhou.
@@ -174,10 +175,24 @@ if (-not $failed) {
 
 # 8) POST /protocols/<id>/comunicacoes (grava de verdade no protocolo de teste "SMOKE TESTE", reaproveitando o id do passo 4)
 if (-not $failed) {
-    $body = @{ content = 'SMOKE: contato de teste do smoke test' } | ConvertTo-Json -Compress
+    $comContent = 'SMOKE: contato de teste do smoke test'
+    $body = @{ content = $comContent } | ConvertTo-Json -Compress
     $r = Invoke-Step -Method POST -Path "/protocols/$smokeId/comunicacoes" -Headers @{ Authorization = "Bearer $token" } -JsonBody $body
     if ($r.Ok) { $calls2xx++ }
     if (-not $r.Ok) { $failed = 'POST /protocols/<id>/comunicacoes' }
+}
+
+# 9) GET /protocols/<id>/comunicacoes (le as comunicacoes do protocolo de teste "SMOKE TESTE" e confere que a do passo 8 aparece, reaproveitando o id do passo 4)
+if (-not $failed) {
+    $r = Invoke-Step -Method GET -Path "/protocols/$smokeId/comunicacoes" -Headers @{ Authorization = "Bearer $token" }
+    if ($r.Ok) { $calls2xx++ }
+    if (-not $r.Ok) { $failed = 'GET /protocols/<id>/comunicacoes' }
+    else {
+        $achou = $null
+        try { $achou = @(($r.Body | ConvertFrom-Json).rows) | Where-Object { $_.content -ceq $comContent } | Select-Object -First 1 }
+        catch { $achou = $null }
+        if (-not $achou) { $failed = 'GET /protocols/<id>/comunicacoes (comunicacao do passo 8 nao encontrada)' }
+    }
 }
 
 $total.Stop()

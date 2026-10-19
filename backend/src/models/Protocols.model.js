@@ -284,3 +284,22 @@ export async function createCommunication(protocolId, { content }) {
     );
     return rows[0];
 }
+
+/**
+ * Lista as comunicações com o cliente de um protocolo, da mais recente para a mais antiga.
+ *
+ * @param {string} protocolId
+ * @returns Promise<{ rows: object[], total: number } | null> - null se o protocolo não existe
+ */
+export async function listCommunications(protocolId) {
+    const protocol = await findById(protocolId);
+    if (!protocol) {
+        return null; // deixa o controller tratar como 404
+    }
+
+    const { rows } = await pool.query(
+        'SELECT * FROM client_communications WHERE protocol_id = $1 ORDER BY created_at DESC',
+        [protocolId]
+    );
+    return { rows, total: rows.length };
+}

@@ -376,3 +376,25 @@ export async function createProtocolCommunication(req, res) {
         return res.status(500).json({ error: 'Erro interno ao registrar comunicação do protocolo.' });
     }
 }
+
+/**
+ * GET /protocols/:id/comunicacoes
+ * Lista as comunicações com o cliente registradas no protocolo.
+ */
+export async function listProtocolCommunications(req, res) {
+    const { id } = req.params;
+
+    try {
+        const result = await ProtocolsModel.listCommunications(id);
+        if (!result) {
+            return res.status(404).json({ error: `Protocolo com id ${id} não encontrado.` });
+        }
+        return res.status(200).json(result);
+    } catch (err) {
+        if (err.code === '22P02') {
+            return res.status(400).json({ error: `Formato de id inválido: ${id}.` });
+        }
+        console.error('Erro ao listar comunicações do protocolo:', err);
+        return res.status(500).json({ error: 'Erro interno ao listar comunicações do protocolo.' });
+    }
+}
