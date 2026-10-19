@@ -553,3 +553,17 @@ Run #38: criado 01:18:37, fim 01:20:48. Run #40: criado 01:40:14, fim 01:42:12. 
 **Evidência:** PR #31; commit `90333c3`; run #66 (id 39173941886); linha `5` de `docs/ficha-coleta.csv`.
 **Métrica (se aplicável):** tempo_total_s = 129 (commit de merge ao fim do smoke); 8 chamadas 2xx; 5 arquivos alterados, 170 linhas alteradas, 6 testes novos.
 **Observações:** Nenhum IP real da EC2, ID de conta AWS nem valor de segredo é registrado neste log.
+
+## [2026-10-18] Amostra 6 (manual): PR #33, GET /protocols/:id/comunicacoes e dois erros digitados
+
+**Fase da trilha:** Transversal (DevOps-6, coleta da PoC)
+**Contexto:** registrar a sexta amostra, a terceira da modalidade manual (2, 4 e 6): o incremento `GET /protocols/:id/comunicacoes` (RF09) e o passo 9 do smoke. Horários em BRT, salvo indicação.
+**O que foi feito:**
+- PR #33 mergeado: commit de merge `0e7db0e` às 21:55:06, com `[skip ci]` no fim do título do diálogo do squash (sem execução do pipeline; o deploy foi manual). Confirmado por `git log` e `gh run list`: nenhum run de push em main. O diálogo do squash não foi fotografado.
+- Amostra 6 (manual), iniciada no commit de merge (precisão de 1 s): **222 s** até o fim do smoke (21:58:47,807 bruto; 21:58:47,729 corrigido), **17 comandos**, **2 intervenções**, 1 dado sensível digitado. O smoke passou a ter **9 chamadas**, todas 2xx (9/9).
+- Os 17 comandos são os 15 do conjunto D mais 2 extras de erros digitados: uma variável de ambiente do PowerShell colada dentro da sessão SSH (`command not found`) e um `docker logs` com nome de container truncado (`configpanel-backen`).
+- PR com 5 arquivos alterados, 171 linhas alteradas (+167 -4), 6 testes novos (221 no total).
+- Correção de relógio (a.ntp.br; negativo = PC adiantado): offset médio de -0,0783 s, com medições de -0,0815 s antes (cerca de 21:51) e -0,0751 s depois (cerca de 22:04, cerca de 5 min após o fim do smoke). Diferente de 16/10 e 17/10, o `w32time` **não foi parado**; foi feita uma ressincronização às 21:51.
+**Evidência:** PR #33; commit `0e7db0e`; linha `6` de `docs/ficha-coleta.csv`.
+**Métrica (se aplicável):** tempo_total_s = 222 (221,729 s corrigido); 17 comandos; 2 intervenções; 9 chamadas 2xx; 5 arquivos alterados, 171 linhas alteradas, 6 testes novos.
+**Observações:** (1) o merge com `[skip ci]` não gera run de push em main, como esperado para a amostra manual. (2) Com o `w32time` em execução, o relógio pode ser ajustado durante a medição; o efeito é limitado pelas duas medições (antes e depois), que diferem em 0,0064 s. (3) Nenhum IP real da EC2, ID de conta AWS nem valor de segredo é registrado neste log.

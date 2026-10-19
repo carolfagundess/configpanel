@@ -18,6 +18,7 @@ Backend Node.js/Express. Porta padrão: `3001` (variável `PORT`). Todas as requ
 | POST   | `/protocols/:id/equipamentos` | Sim | Registra um equipamento no protocolo |
 | GET    | `/protocols/:id/equipamentos` | Sim | Lista os equipamentos do protocolo |
 | POST   | `/protocols/:id/comunicacoes` | Sim | Registra uma comunicação com o cliente no protocolo |
+| GET    | `/protocols/:id/comunicacoes` | Sim | Lista as comunicações com o cliente do protocolo |
 
 ## Autenticação
 
@@ -307,6 +308,26 @@ Campos extras no body são ignorados.
 ```json
 { "content": "Cliente contatado por telefone" }
 ```
+
+### `GET /protocols/:id/comunicacoes`
+
+🔒 Requer token. Lista as comunicações com o cliente registradas em um protocolo existente (RF09), ordenadas por `created_at` decrescente.
+
+**200 OK**
+```json
+{ "rows": [ { "...": "comunicação" } ], "total": 1 }
+```
+Cada item de `rows` é uma linha da tabela `client_communications` (`id`, `protocol_id`, `content`, `created_at`). `total` é o número de itens retornados (`rows.length`); não há paginação.
+
+**Respostas**
+
+| Código | Situação |
+|--------|----------|
+| 200    | Lista de comunicações (vazia, `{ "rows": [], "total": 0 }`, se o protocolo não tem comunicações) |
+| 400    | `id` fora do formato UUID |
+| 401    | Token ausente, inválido ou expirado |
+| 404    | Protocolo não encontrado |
+| 500    | Erro interno |
 
 ---
 
