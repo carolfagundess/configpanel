@@ -567,3 +567,27 @@ Run #38: criado 01:18:37, fim 01:20:48. Run #40: criado 01:40:14, fim 01:42:12. 
 **Evidência:** PR #33; commit `0e7db0e`; linha `6` de `docs/ficha-coleta.csv`.
 **Métrica (se aplicável):** tempo_total_s = 222 (221,729 s corrigido); 17 comandos; 2 intervenções; 9 chamadas 2xx; 5 arquivos alterados, 171 linhas alteradas, 6 testes novos.
 **Observações:** (1) o merge com `[skip ci]` não gera run de push em main, como esperado para a amostra manual. (2) Com o `w32time` em execução, o relógio pode ser ajustado durante a medição; o efeito é limitado pelas duas medições (antes e depois), que diferem em 0,0064 s. (3) Nenhum IP real da EC2, ID de conta AWS nem valor de segredo é registrado neste log.
+
+## [2026-10-23] Amostra 7 (pipeline): PR #35, GET /protocols/:id/checklist
+
+**Fase da trilha:** Transversal (DevOps-6, coleta da PoC)
+**Contexto:** registrar a sétima amostra, a quarta da modalidade pipeline: o incremento `GET /protocols/:id/checklist` (RF10) e o passo 10 do smoke. Horários em BRT, salvo indicação.
+**O que foi feito:**
+- PR #35 mergeado: commit de merge `5f86872` às 15:23:34, **sem** `[skip ci]` (amostra de pipeline). Atraso entre o merge e o início do run: 4 s.
+- Run #72 (id 40002908272): 5 jobs com sucesso. **132 s** (131,6 s) do commit de merge ao fim do smoke (fim do smoke às 15:25:45,6). Sem relógio a corrigir: início e fim vêm do GitHub.
+
+| Job | Duração |
+|-----|---------|
+| test-backend | 33 s |
+| build-docker | 13 s |
+| push-to-ecr | 28 s |
+| Deploy to EC2 | 30 s |
+| Smoke test | 11 s |
+
+- O smoke passou a ter **10 chamadas**, todas 2xx (10/10, `chamadas_2xx=10`). O passo 10 é `GET /protocols/:id/checklist`; a lista vazia é aceita porque ainda não há POST de checklist.
+- 5 arquivos alterados, 168 linhas alteradas (+165 -3), 6 testes novos (227 no total).
+- `image_version` 20261012.334.1.
+- O GitHub registrou 4 anotações sobre Node.js 20 deprecated nas ações (aviso, sem efeito no resultado do run).
+**Evidência:** PR #35; commit `5f86872`; run #72 (id 40002908272); linha `7` de `docs/ficha-coleta.csv`.
+**Métrica (se aplicável):** tempo_total_s = 132 (commit de merge ao fim do smoke); 10 chamadas 2xx; 5 arquivos alterados, 168 linhas alteradas, 6 testes novos.
+**Observações:** Nenhum IP real da EC2, ID de conta AWS nem valor de segredo é registrado neste log.

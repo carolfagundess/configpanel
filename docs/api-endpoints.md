@@ -19,6 +19,7 @@ Backend Node.js/Express. Porta padrão: `3001` (variável `PORT`). Todas as requ
 | GET    | `/protocols/:id/equipamentos` | Sim | Lista os equipamentos do protocolo |
 | POST   | `/protocols/:id/comunicacoes` | Sim | Registra uma comunicação com o cliente no protocolo |
 | GET    | `/protocols/:id/comunicacoes` | Sim | Lista as comunicações com o cliente do protocolo |
+| GET    | `/protocols/:id/checklist` | Sim | Lista os itens do checklist do protocolo |
 
 ## Autenticação
 
@@ -328,6 +329,28 @@ Cada item de `rows` é uma linha da tabela `client_communications` (`id`, `proto
 | 401    | Token ausente, inválido ou expirado |
 | 404    | Protocolo não encontrado |
 | 500    | Erro interno |
+
+### `GET /protocols/:id/checklist`
+
+🔒 Requer token. Lista os itens do checklist registrados em um protocolo existente (RF10), ordenados por `created_at` decrescente.
+
+**200 OK**
+```json
+{ "rows": [ { "...": "item do checklist" } ], "total": 1 }
+```
+Cada item de `rows` é uma linha da tabela `checklist_items`: `id`, `protocol_id`, `item_type` (`equipment`, `ip_vlan` ou `client_contact`), `is_required`, `is_done`, `completed_at`, `completed_by` e `created_at`. `total` é o número de itens retornados (`rows.length`); não há paginação.
+
+**Respostas**
+
+| Código | Situação |
+|--------|----------|
+| 200    | Lista de itens do checklist (vazia, `{ "rows": [], "total": 0 }`, se o protocolo não tem itens) |
+| 400    | `id` fora do formato UUID |
+| 401    | Token ausente, inválido ou expirado |
+| 404    | Protocolo não encontrado |
+| 500    | Erro interno |
+
+A criação de itens pela API ainda não existe (POST e PATCH do checklist estão pendentes); enquanto isso a lista volta vazia na prática, e o smoke aceita lista vazia.
 
 ---
 
