@@ -6,6 +6,7 @@ const VALID_DELIVERY_METHODS = ['trunk', 'ip_publico', 'equipamento'];
 const VALID_IP_CATEGORIES = ['gerencia', 'bloco', 'ptp'];
 const VALID_IP_OWNERSHIPS = ['unifique', 'last_mile'];
 const VALID_EQUIPMENT_OWNERSHIPS = ['unifique', 'last_mile'];
+const VALID_CHECKLIST_ITEM_TYPES = ['equipment', 'ip_vlan', 'client_contact'];
 
 /**
  * Aceita IPv4, IPv6 ou CIDR (ip/prefixo), com no máximo 100 caracteres (limite da coluna ips.address).
@@ -418,5 +419,40 @@ export async function listProtocolChecklist(req, res) {
         }
         console.error('Erro ao listar checklist do protocolo:', err);
         return res.status(500).json({ error: 'Erro interno ao listar checklist do protocolo.' });
+    }
+}
+
+/**
+ * POST /protocols/:id/checklist
+ * Registra um item no checklist do protocolo (RF10). Corpo: { item_type, is_required? }.
+ */
+export async function createProtocolChecklistItem(req, res) {
+    const { id } = req.params;
+    const { item_type, is_required } = req.body ?? {};
+
+    if (!VALID_CHECKLIST_ITEM_TYPES.includes(item_type)) {
+        return res.status(400).json({
+            error: `Campo obrigatório ausente ou inválido: item_type (use um de: ${VALID_CHECKLIST_ITEM_TYPES.join(', ')}).`,
+        });
+    }
+
+    if (is_required !== undefined && typeof is_required !== 'boolean') {
+        return res.status(400).json({
+            error: 'Campo inválido: is_required deve ser booleano (true ou false).',
+        });
+    }
+
+    try {
+        const item = await ProtocolsModel.createChecklistItem(id, { item_type, is_required });
+        if (!item) {
+            return res.status(404).json({ error: `Protocolo com id ${id} não encontrado.` });
+        }
+        return res.status(201).json(item);
+    } catch (err) {
+        if (err.code === '22P02') {
+            return res.status(400).json({ error: `Formato de id inválido: ${id}.` });
+        }
+        console.error('Erro ao registrar item do checklist do protocolo:', err);
+        return res.status(500).json({ error: 'Erro interno ao registrar item do checklist do protocolo.' });
     }
 }
