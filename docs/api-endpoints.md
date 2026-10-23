@@ -19,6 +19,7 @@ Backend Node.js/Express. Porta padrão: `3001` (variável `PORT`). Todas as requ
 | GET    | `/protocols/:id/equipamentos` | Sim | Lista os equipamentos do protocolo |
 | POST   | `/protocols/:id/comunicacoes` | Sim | Registra uma comunicação com o cliente no protocolo |
 | GET    | `/protocols/:id/comunicacoes` | Sim | Lista as comunicações com o cliente do protocolo |
+| POST   | `/protocols/:id/checklist` | Sim | Registra um item no checklist do protocolo |
 | GET    | `/protocols/:id/checklist` | Sim | Lista os itens do checklist do protocolo |
 
 ## Autenticação
@@ -330,6 +331,36 @@ Cada item de `rows` é uma linha da tabela `client_communications` (`id`, `proto
 | 404    | Protocolo não encontrado |
 | 500    | Erro interno |
 
+### `POST /protocols/:id/checklist`
+
+🔒 Requer token. Registra um item no checklist de um protocolo existente (RF10).
+
+**Body**
+
+| Campo         | Tipo    | Obrigatório | Observações |
+|---------------|---------|-------------|-------------|
+| `item_type`   | string  | Sim         | Um de `equipment`, `ip_vlan` ou `client_contact` |
+| `is_required` | boolean | Não         | Padrão `true` |
+
+Campos extras no body são ignorados.
+
+**Respostas**
+
+| Código | Situação |
+|--------|----------|
+| 201    | Item criado (retorna a linha de `checklist_items` criada) |
+| 400    | `item_type` ausente ou fora dos valores permitidos; `is_required` que não é booleano; `id` fora do formato UUID |
+| 401    | Token ausente, inválido ou expirado |
+| 404    | Protocolo não encontrado |
+| 500    | Erro interno |
+
+A ordem de validação é 400 antes de 404: uma requisição inválida para um protocolo inexistente responde 400, não 404.
+
+**Exemplo**
+```json
+{ "item_type": "equipment", "is_required": true }
+```
+
 ### `GET /protocols/:id/checklist`
 
 🔒 Requer token. Lista os itens do checklist registrados em um protocolo existente (RF10), ordenados por `created_at` decrescente.
@@ -350,7 +381,7 @@ Cada item de `rows` é uma linha da tabela `checklist_items`: `id`, `protocol_id
 | 404    | Protocolo não encontrado |
 | 500    | Erro interno |
 
-A criação de itens pela API ainda não existe (POST e PATCH do checklist estão pendentes); enquanto isso a lista volta vazia na prática, e o smoke aceita lista vazia.
+Os itens são criados por `POST /protocols/:id/checklist`; PATCH (marcar como concluído) ainda está pendente.
 
 ---
 
