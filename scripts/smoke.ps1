@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-  Smoke test do ConfigPanel: /health, /auth/login, /protocols, POST /protocols/<id>/ips, GET /protocols/<id>/ips, GET /protocols/<id>/equipamentos, POST /protocols/<id>/equipamentos, POST /protocols/<id>/comunicacoes e GET /protocols/<id>/comunicacoes.
+  Smoke test do ConfigPanel: /health, /auth/login, /protocols, POST /protocols/<id>/ips, GET /protocols/<id>/ips, GET /protocols/<id>/equipamentos, POST /protocols/<id>/equipamentos, POST /protocols/<id>/comunicacoes, GET /protocols/<id>/comunicacoes e GET /protocols/<id>/checklist.
 
 .DESCRIPTION
-  Roda nove requisicoes em sequencia e imprime, para cada uma, o horario
+  Roda dez requisicoes em sequencia e imprime, para cada uma, o horario
   (Brasilia e UTC), metodo e caminho, status e tempo em ms. Sem retry e com
   timeout de 10 s por requisicao. Nao grava nada em disco e nunca imprime
   a senha nem o token.
@@ -13,6 +13,7 @@
   O passo 7 grava de verdade um equipamento (SMOKE-ONU, MAC 00:00:5E:00:53:01, faixa de documentacao RFC 7042) no mesmo protocolo.
   O passo 8 grava de verdade uma comunicacao com o cliente (client_communications) no mesmo protocolo.
   O passo 9 le as comunicacoes do mesmo protocolo e confere que a gravada no passo 8 aparece.
+  O passo 10 le o checklist do mesmo protocolo e exige rows como lista (total 0 e aceito, pois ainda nao ha POST de checklist).
 
   Credenciais: $env:SMOKE_USER e $env:SMOKE_PASS; se faltarem, pede com Read-Host.
   Exit code: 0 se tudo passou, 1 se algum passo falhou.
@@ -193,6 +194,14 @@ if (-not $failed) {
         catch { $achou = $null }
         if (-not $achou) { $failed = 'GET /protocols/<id>/comunicacoes (comunicacao do passo 8 nao encontrada)' }
     }
+}
+
+# 10) GET /protocols/<id>/checklist (le o checklist do protocolo de teste "SMOKE TESTE", reaproveitando o id do passo 4; ainda nao ha POST, entao total 0 e aceito)
+if (-not $failed) {
+    $r = Invoke-Step -Method GET -Path "/protocols/$smokeId/checklist" -Headers @{ Authorization = "Bearer $token" }
+    if ($r.Ok) { $calls2xx++ }
+    if (-not $r.Ok) { $failed = 'GET /protocols/<id>/checklist' }
+    elseif ($r.Body -notmatch '"rows"\s*:\s*\[') { $failed = 'GET /protocols/<id>/checklist (rows nao e lista)' }
 }
 
 $total.Stop()
