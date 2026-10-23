@@ -591,3 +591,16 @@ Run #38: criado 01:18:37, fim 01:20:48. Run #40: criado 01:40:14, fim 01:42:12. 
 **Evidência:** PR #35; commit `5f86872`; run #72 (id 40002908272); linha `7` de `docs/ficha-coleta.csv`.
 **Métrica (se aplicável):** tempo_total_s = 132 (commit de merge ao fim do smoke); 10 chamadas 2xx; 5 arquivos alterados, 168 linhas alteradas, 6 testes novos.
 **Observações:** Nenhum IP real da EC2, ID de conta AWS nem valor de segredo é registrado neste log.
+
+## [2026-10-23] Amostra 8 (manual): PR #37, POST /protocols/:id/checklist
+
+**Fase da trilha:** Transversal (DevOps-6, coleta da PoC)
+**Contexto:** registrar a oitava amostra, a quarta da modalidade manual (2, 4, 6 e 8): o incremento `POST /protocols/:id/checklist` (RF10) e o passo 11 do smoke. Horários em BRT, salvo indicação.
+**O que foi feito:**
+- PR #37 mergeado: commit de merge `2b5660c` às 17:17:15, com `[skip ci]` no fim do título do squash (sem execução do pipeline; o deploy foi manual). Confirmado por `git log` e `gh run list`: nenhum run de push em main. O diálogo do squash não foi fotografado.
+- Amostra 8 (manual), iniciada no commit de merge (precisão de 1 s): **266 s** (266,28) até o fim do smoke (17:21:41,278 corrigido), **15 comandos** (todos do conjunto D, nenhum extra), **1 intervenção** (a senha do smoke, 1 dado sensível digitado). O smoke passou a ter **11 chamadas**, todas 2xx (11/11); o passo 11 é `POST /protocols/:id/checklist` (201).
+- PR com 5 arquivos alterados, 213 linhas alteradas (+208 -5), 7 testes novos (234 no total).
+- Correção de relógio (a.ntp.br; negativo = PC adiantado): offset médio de -0,0166 s, com medições de -0,0111 s antes (cerca de 17:06, 11 min antes do merge) e -0,0221 s depois (cerca de 17:23). O relógio do PC estava 0,617 s atrasado e foi ajustado com `Set-Date` +0,617 s às 17:03:55, com o `w32time` parado.
+**Evidência:** PR #37; commit `2b5660c`; linha `8` de `docs/ficha-coleta.csv`.
+**Métrica (se aplicável):** tempo_total_s = 266 (266,28 s corrigido); 15 comandos; 0 extras; 1 intervenção; 11 chamadas 2xx; 5 arquivos alterados, 213 linhas alteradas, 7 testes novos.
+**Observações:** (1) o merge com `[skip ci]` não gera run de push em main, como esperado para a amostra manual. (2) A primeira medição do offset foi feita 11 min antes do merge; o efeito é desprezível frente à diferença de 0,0110 s entre as duas medições. (3) Nenhum IP real da EC2, ID de conta AWS nem valor de segredo é registrado neste log.
