@@ -303,3 +303,22 @@ export async function listCommunications(protocolId) {
     );
     return { rows, total: rows.length };
 }
+
+/**
+ * Lista os itens do checklist de um protocolo, do mais recente para o mais antigo (RF10).
+ *
+ * @param {string} protocolId
+ * @returns Promise<{ rows: object[], total: number } | null> - null se o protocolo não existe
+ */
+export async function listChecklistItems(protocolId) {
+    const protocol = await findById(protocolId);
+    if (!protocol) {
+        return null; // deixa o controller tratar como 404
+    }
+
+    const { rows } = await pool.query(
+        'SELECT * FROM checklist_items WHERE protocol_id = $1 ORDER BY created_at DESC',
+        [protocolId]
+    );
+    return { rows, total: rows.length };
+}
