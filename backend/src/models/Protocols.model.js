@@ -322,3 +322,26 @@ export async function listChecklistItems(protocolId) {
     );
     return { rows, total: rows.length };
 }
+
+/**
+ * Registra um item no checklist de um protocolo (RF10).
+ *
+ * @param {string} protocolId
+ * @param {object} item
+ * @param {string} item.item_type - 'equipment', 'ip_vlan' ou 'client_contact'
+ * @param {boolean} [item.is_required] - se omitido, vale o default do banco (true)
+ * @returns Promise<object | null> - o item criado, ou null se o protocolo não existe
+ */
+export async function createChecklistItem(protocolId, { item_type, is_required }) {
+    const protocol = await findById(protocolId);
+    if (!protocol) {
+        return null; // deixa o controller tratar como 404
+    }
+
+    const { rows } = await pool.query(
+        `INSERT INTO checklist_items (protocol_id, item_type, is_required)
+         VALUES ($1, $2, COALESCE($3, true)) RETURNING *`,
+        [protocolId, item_type, is_required]
+    );
+    return rows[0];
+}

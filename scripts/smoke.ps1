@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-  Smoke test do ConfigPanel: /health, /auth/login, /protocols, POST /protocols/<id>/ips, GET /protocols/<id>/ips, GET /protocols/<id>/equipamentos, POST /protocols/<id>/equipamentos, POST /protocols/<id>/comunicacoes, GET /protocols/<id>/comunicacoes e GET /protocols/<id>/checklist.
+  Smoke test do ConfigPanel: /health, /auth/login, /protocols, POST /protocols/<id>/ips, GET /protocols/<id>/ips, GET /protocols/<id>/equipamentos, POST /protocols/<id>/equipamentos, POST /protocols/<id>/comunicacoes, GET /protocols/<id>/comunicacoes, GET /protocols/<id>/checklist e POST /protocols/<id>/checklist.
 
 .DESCRIPTION
-  Roda dez requisicoes em sequencia e imprime, para cada uma, o horario
+  Roda onze requisicoes em sequencia e imprime, para cada uma, o horario
   (Brasilia e UTC), metodo e caminho, status e tempo em ms. Sem retry e com
   timeout de 10 s por requisicao. Nao grava nada em disco e nunca imprime
   a senha nem o token.
@@ -13,7 +13,15 @@
   O passo 7 grava de verdade um equipamento (SMOKE-ONU, MAC 00:00:5E:00:53:01, faixa de documentacao RFC 7042) no mesmo protocolo.
   O passo 8 grava de verdade uma comunicacao com o cliente (client_communications) no mesmo protocolo.
   O passo 9 le as comunicacoes do mesmo protocolo e confere que a gravada no passo 8 aparece.
-  O passo 10 le o checklist do mesmo protocolo e exige rows como lista (total 0 e aceito, pois ainda nao ha POST de checklist).
+  O passo 10 le o checklist do mesmo protocolo e exige rows como lista (a lista pode ter itens, gravados pelo passo 11 de execucoes anteriores, ou estar vazia).
+  O passo 11 grava de verdade um item de checklist (item_type equipment) no mesmo protocolo e confere o item_type na resposta.
+
+  Limpeza: o smoke acumula dados no protocolo de client_name "SMOKE TESTE" a cada execucao (passos 4, 7, 8 e 11).
+  Para limpar os filhos, sem apagar o protocolo (protocol_history e imutavel e bloqueia o DELETE em protocols), rode no Postgres:
+    DELETE FROM checklist_items WHERE protocol_id IN (SELECT id FROM protocols WHERE client_name = 'SMOKE TESTE');
+    DELETE FROM client_communications WHERE protocol_id IN (SELECT id FROM protocols WHERE client_name = 'SMOKE TESTE');
+    DELETE FROM equipment WHERE protocol_id IN (SELECT id FROM protocols WHERE client_name = 'SMOKE TESTE');
+    DELETE FROM ips WHERE protocol_id IN (SELECT id FROM protocols WHERE client_name = 'SMOKE TESTE');
 
   Credenciais: $env:SMOKE_USER e $env:SMOKE_PASS; se faltarem, pede com Read-Host.
   Exit code: 0 se tudo passou, 1 se algum passo falhou.
@@ -196,12 +204,26 @@ if (-not $failed) {
     }
 }
 
-# 10) GET /protocols/<id>/checklist (le o checklist do protocolo de teste "SMOKE TESTE", reaproveitando o id do passo 4; ainda nao ha POST, entao total 0 e aceito)
+# 10) GET /protocols/<id>/checklist (le o checklist do protocolo de teste "SMOKE TESTE", reaproveitando o id do passo 4; exige rows como lista, vazia ou com itens)
 if (-not $failed) {
     $r = Invoke-Step -Method GET -Path "/protocols/$smokeId/checklist" -Headers @{ Authorization = "Bearer $token" }
     if ($r.Ok) { $calls2xx++ }
     if (-not $r.Ok) { $failed = 'GET /protocols/<id>/checklist' }
     elseif ($r.Body -notmatch '"rows"\s*:\s*\[') { $failed = 'GET /protocols/<id>/checklist (rows nao e lista)' }
+}
+
+# 11) POST /protocols/<id>/checklist (grava de verdade no protocolo de teste "SMOKE TESTE", reaproveitando o id do passo 4)
+if (-not $failed) {
+    $body = @{ item_type = 'equipment' } | ConvertTo-Json -Compress
+    $r = Invoke-Step -Method POST -Path "/protocols/$smokeId/checklist" -Headers @{ Authorization = "Bearer $token" } -JsonBody $body
+    if ($r.Ok) { $calls2xx++ }
+    if (-not $r.Ok) { $failed = 'POST /protocols/<id>/checklist' }
+    elseif ($r.Status -ne 201) { $failed = "POST /protocols/<id>/checklist (esperado 201, veio $($r.Status))" }
+    else {
+        $tipo = $null
+        try { $tipo = ($r.Body | ConvertFrom-Json).item_type } catch { $tipo = $null }
+        if ($tipo -cne 'equipment') { $failed = 'POST /protocols/<id>/checklist (item_type da resposta diferente de equipment)' }
+    }
 }
 
 $total.Stop()
