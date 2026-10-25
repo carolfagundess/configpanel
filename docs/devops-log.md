@@ -598,9 +598,33 @@ Run #38: criado 01:18:37, fim 01:20:48. Run #40: criado 01:40:14, fim 01:42:12. 
 **Contexto:** registrar a oitava amostra, a quarta da modalidade manual (2, 4, 6 e 8): o incremento `POST /protocols/:id/checklist` (RF10) e o passo 11 do smoke. Horários em BRT, salvo indicação.
 **O que foi feito:**
 - PR #37 mergeado: commit de merge `2b5660c` às 17:17:15, com `[skip ci]` no fim do título do squash (sem execução do pipeline; o deploy foi manual). Confirmado por `git log` e `gh run list`: nenhum run de push em main. O diálogo do squash não foi fotografado.
-- Amostra 8 (manual), iniciada no commit de merge (precisão de 1 s): **266 s** (266,28) até o fim do smoke (17:21:41,278 corrigido), **15 comandos** (todos do conjunto D, nenhum extra), **1 intervenção** (a senha do smoke, 1 dado sensível digitado). O smoke passou a ter **11 chamadas**, todas 2xx (11/11); o passo 11 é `POST /protocols/:id/checklist` (201).
+- Amostra 8 (manual), iniciada no commit de merge (precisão de 1 s): **266 s** (266,28) até o fim do smoke (17:21:41,278 corrigido), **15 comandos** (todos do conjunto D, nenhum extra), **0 intervenções** e 1 dado sensível digitado (a senha do smoke). O smoke passou a ter **11 chamadas**, todas 2xx (11/11); o passo 11 é `POST /protocols/:id/checklist` (201).
 - PR com 5 arquivos alterados, 213 linhas alteradas (+208 -5), 7 testes novos (234 no total).
 - Correção de relógio (a.ntp.br; negativo = PC adiantado): offset médio de -0,0166 s, com medições de -0,0111 s antes (cerca de 17:06, 11 min antes do merge) e -0,0221 s depois (cerca de 17:23). O relógio do PC estava 0,617 s atrasado e foi ajustado com `Set-Date` +0,617 s às 17:03:55, com o `w32time` parado.
 **Evidência:** PR #37; commit `2b5660c`; linha `8` de `docs/ficha-coleta.csv`.
-**Métrica (se aplicável):** tempo_total_s = 266 (266,28 s corrigido); 15 comandos; 0 extras; 1 intervenção; 11 chamadas 2xx; 5 arquivos alterados, 213 linhas alteradas, 7 testes novos.
+**Métrica (se aplicável):** tempo_total_s = 266 (266,28 s corrigido); 15 comandos; 0 extras; 0 intervenções; 1 dado sensível digitado; 11 chamadas 2xx; 5 arquivos alterados, 213 linhas alteradas, 7 testes novos.
 **Observações:** (1) o merge com `[skip ci]` não gera run de push em main, como esperado para a amostra manual. (2) A primeira medição do offset foi feita 11 min antes do merge; o efeito é desprezível frente à diferença de 0,0110 s entre as duas medições. (3) Nenhum IP real da EC2, ID de conta AWS nem valor de segredo é registrado neste log.
+
+## [2026-10-25] Amostra 9 (pipeline): PR #39, PATCH /protocols/:id/checklist/:itemId
+
+**Fase da trilha:** Transversal (DevOps-6, coleta da PoC)
+**Contexto:** registrar a nona amostra, a quinta da modalidade pipeline (1, 3, 5, 7 e 9): o incremento `PATCH /protocols/:id/checklist/:itemId` (RF10) e o passo 12 do smoke. Horários em BRT, salvo indicação.
+**O que foi feito:**
+- Código escrito pela autora com tutoria do Claude Code, que também escreveu o passo 12 do smoke.ps1 e corrigiu uma chave faltante no controller.
+- PR #39 mergeado: commit de merge `1d9ec50` às 14:07:30, **sem** `[skip ci]` (amostra de pipeline). Atraso entre o merge e o início do run: 3 s.
+- Run #77 (id 40214941675): 5 jobs com sucesso. **110 s** (109,95 s) do commit de merge ao fim do smoke (fim do smoke às 14:09:19,9). Sem relógio a corrigir: início e fim vêm do GitHub.
+
+| Job | Duração |
+|-----|---------|
+| test-backend | 32 s |
+| build-docker | 11 s |
+| push-to-ecr | 20 s |
+| Deploy to EC2 | 28 s |
+| Smoke test | 5 s |
+
+- O smoke passou a ter **12 chamadas**, todas 2xx (12/12, `chamadas_2xx=12`). O passo 12 é `PATCH /protocols/:id/checklist/:itemId` no item criado pelo passo 11 (200, `is_done` true), executado em produção pela primeira vez neste run.
+- 5 arquivos alterados, 258 linhas alteradas (+254 -4), 10 testes novos (244 no total).
+- `image_version` 20261012.334.1.
+**Evidência:** PR #39; commit `1d9ec50`; run #77 (id 40214941675); linha `9` de `docs/ficha-coleta.csv`.
+**Métrica (se aplicável):** tempo_total_s = 110 (109,95 s, commit de merge ao fim do smoke); 12 chamadas 2xx; 5 arquivos alterados, 258 linhas alteradas, 10 testes novos.
+**Observações:** Nenhum IP real da EC2, ID de conta AWS nem valor de segredo é registrado neste log.
