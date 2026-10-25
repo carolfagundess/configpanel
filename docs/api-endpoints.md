@@ -21,6 +21,7 @@ Backend Node.js/Express. Porta padrão: `3001` (variável `PORT`). Todas as requ
 | GET    | `/protocols/:id/comunicacoes` | Sim | Lista as comunicações com o cliente do protocolo |
 | POST   | `/protocols/:id/checklist` | Sim | Registra um item no checklist do protocolo |
 | GET    | `/protocols/:id/checklist` | Sim | Lista os itens do checklist do protocolo |
+| PATCH  | `/protocols/:id/checklist/:itemId` | Sim | Marca ou desmarca um item do checklist do protocolo |
 
 ## Autenticação
 
@@ -381,7 +382,40 @@ Cada item de `rows` é uma linha da tabela `checklist_items`: `id`, `protocol_id
 | 404    | Protocolo não encontrado |
 | 500    | Erro interno |
 
-Os itens são criados por `POST /protocols/:id/checklist`; PATCH (marcar como concluído) ainda está pendente.
+Os itens são criados por `POST /protocols/:id/checklist` e marcados (ou desmarcados) por `PATCH /protocols/:id/checklist/:itemId`.
+
+### `PATCH /protocols/:id/checklist/:itemId`
+
+🔒 Requer token. Marca ou desmarca um item do checklist de um protocolo existente (RF10).
+
+**Body**
+
+| Campo     | Tipo    | Obrigatório | Observações |
+|-----------|---------|-------------|-------------|
+| `is_done` | boolean | Sim         | `true` marca o item como concluído; `false` desmarca |
+
+Campos extras no body são ignorados.
+
+- Com `true`: grava `is_done = true`, `completed_at = NOW()` e `completed_by` = usuário autenticado (`userId` do token).
+- Com `false`: grava `is_done = false` e zera `completed_at` e `completed_by` (`null`).
+- Marcar `true` de novo regrava `completed_at` e `completed_by` com o horário e o usuário da nova requisição.
+
+**Respostas**
+
+| Código | Situação |
+|--------|----------|
+| 200    | Item atualizado (retorna a linha de `checklist_items` atualizada) |
+| 400    | `is_done` ausente ou que não é booleano; `id` ou `itemId` fora do formato UUID |
+| 401    | Token ausente, inválido ou expirado |
+| 404    | Protocolo inexistente, item inexistente ou item de outro protocolo (mesma resposta, de propósito) |
+| 500    | Erro interno |
+
+O 400 de `is_done` vem antes de qualquer consulta ao banco: uma requisição com `is_done` inválido para um protocolo ou item inexistente responde 400, não 404. O token precisa ter vindo do login (`POST /auth/login`), que carrega `userId`; é esse valor que vai para `completed_by`.
+
+**Exemplo**
+```json
+{ "is_done": true }
+```
 
 ---
 
