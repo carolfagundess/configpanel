@@ -345,3 +345,28 @@ export async function createChecklistItem(protocolId, { item_type, is_required }
     );
     return rows[0];
 }
+
+/**
+ * Atualiza o estado de um item do checklist de um protocolo (RF10).
+ * Com is_done=true grava completed_at=NOW() e completed_by=userId; com false zera os dois.
+ * Marcar true de novo regrava completed_at e completed_by.
+ *
+ * @param {string} protocolId
+ * @param {string} itemId
+ * @param {object} data
+ * @param {boolean} data.is_done
+ * @param {string} data.userId - id (UUID) do usuário autenticado
+ * @returns Promise<object | null> - o item atualizado, ou null se o protocolo ou o item não existe, ou se o item é de outro protocolo
+ */
+export async function updateChecklistItem(protocolId, itemId, { is_done, userId }) {
+    const { rows } = await pool.query(
+        `UPDATE checklist_items
+         SET is_done = $3::boolean,
+             completed_at = CASE WHEN $3::boolean THEN NOW() ELSE NULL END,
+             completed_by = CASE WHEN $3::boolean THEN $4::uuid ELSE NULL END
+         WHERE id = $1 AND protocol_id = $2
+         RETURNING *`,
+        [itemId, protocolId, is_done, userId]
+    );
+    return rows[0] ?? null; // deixa o controller tratar como 404
+}

@@ -456,3 +456,36 @@ export async function createProtocolChecklistItem(req, res) {
         return res.status(500).json({ error: 'Erro interno ao registrar item do checklist do protocolo.' });
     }
 }
+
+/**
+ * PATCH /protocols/:id/checklist/:itemId
+ * Marca ou desmarca um item do checklist do protocolo (RF10). Corpo: { is_done }.
+ * Com true grava completed_at e completed_by (usuário autenticado); com false zera os dois.
+ */
+export async function updateProtocolChecklistItem(req, res) {
+    const { id, itemId } = req.params;
+    const { is_done } = req.body ?? {};
+
+    if (typeof is_done !== 'boolean') {
+        return res.status(400).json({
+            error: 'Campo obrigatório ausente ou inválido: is_done deve ser booleano (true ou false).',
+        });
+    }
+
+    try {
+        const item = await ProtocolsModel.updateChecklistItem(id, itemId, {
+            is_done,
+            userId: req.user.userId,
+        });
+        if (!item) {
+            return res.status(404).json({ error: `Item ${itemId} não encontrado no protocolo ${id}.` });
+        }
+        return res.status(200).json(item);
+    } catch (err) {
+        if (err.code === '22P02') {
+            return res.status(400).json({ error: `Formato de id inválido: protocolo ${id} ou item ${itemId}.` });
+        }
+        console.error('Erro ao atualizar item do checklist do protocolo:', err);
+        return res.status(500).json({ error: 'Erro interno ao atualizar item do checklist do protocolo.' });
+    }
+}

@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-  Smoke test do ConfigPanel: /health, /auth/login, /protocols, POST /protocols/<id>/ips, GET /protocols/<id>/ips, GET /protocols/<id>/equipamentos, POST /protocols/<id>/equipamentos, POST /protocols/<id>/comunicacoes, GET /protocols/<id>/comunicacoes, GET /protocols/<id>/checklist e POST /protocols/<id>/checklist.
+  Smoke test do ConfigPanel: /health, /auth/login, /protocols, POST /protocols/<id>/ips, GET /protocols/<id>/ips, GET /protocols/<id>/equipamentos, POST /protocols/<id>/equipamentos, POST /protocols/<id>/comunicacoes, GET /protocols/<id>/comunicacoes, GET /protocols/<id>/checklist, POST /protocols/<id>/checklist e PATCH /protocols/<id>/checklist/<itemId>.
 
 .DESCRIPTION
-  Roda onze requisicoes em sequencia e imprime, para cada uma, o horario
+  Roda doze requisicoes em sequencia e imprime, para cada uma, o horario
   (Brasilia e UTC), metodo e caminho, status e tempo em ms. Sem retry e com
   timeout de 10 s por requisicao. Nao grava nada em disco e nunca imprime
   a senha nem o token.
@@ -15,6 +15,7 @@
   O passo 9 le as comunicacoes do mesmo protocolo e confere que a gravada no passo 8 aparece.
   O passo 10 le o checklist do mesmo protocolo e exige rows como lista (a lista pode ter itens, gravados pelo passo 11 de execucoes anteriores, ou estar vazia).
   O passo 11 grava de verdade um item de checklist (item_type equipment) no mesmo protocolo e confere o item_type na resposta.
+  O passo 12 marca como feito (PATCH is_done true) o item de checklist criado no passo 11 e exige 200 com is_done true na resposta.
 
   Limpeza: o smoke acumula dados no protocolo de client_name "SMOKE TESTE" a cada execucao (passos 4, 7, 8 e 11).
   Para limpar os filhos, sem apagar o protocolo (protocol_history e imutavel e bloqueia o DELETE em protocols), rode no Postgres:
@@ -221,8 +222,24 @@ if (-not $failed) {
     elseif ($r.Status -ne 201) { $failed = "POST /protocols/<id>/checklist (esperado 201, veio $($r.Status))" }
     else {
         $tipo = $null
-        try { $tipo = ($r.Body | ConvertFrom-Json).item_type } catch { $tipo = $null }
+        $checklistItemId = $null
+        try { $item = $r.Body | ConvertFrom-Json; $tipo = $item.item_type; $checklistItemId = $item.id } catch { $tipo = $null }
         if ($tipo -cne 'equipment') { $failed = 'POST /protocols/<id>/checklist (item_type da resposta diferente de equipment)' }
+        elseif (-not $checklistItemId) { $failed = 'POST /protocols/<id>/checklist (resposta sem id do item)' }
+    }
+}
+
+# 12) PATCH /protocols/<id>/checklist/<itemId> (marca como feito o item criado no passo 11; exige 200 e is_done true)
+if (-not $failed) {
+    $body = @{ is_done = $true } | ConvertTo-Json -Compress
+    $r = Invoke-Step -Method PATCH -Path "/protocols/$smokeId/checklist/$checklistItemId" -Headers @{ Authorization = "Bearer $token" } -JsonBody $body
+    if ($r.Ok) { $calls2xx++ }
+    if (-not $r.Ok) { $failed = 'PATCH /protocols/<id>/checklist/<itemId>' }
+    elseif ($r.Status -ne 200) { $failed = "PATCH /protocols/<id>/checklist/<itemId> (esperado 200, veio $($r.Status))" }
+    else {
+        $feito = $null
+        try { $feito = ($r.Body | ConvertFrom-Json).is_done } catch { $feito = $null }
+        if ($feito -isnot [bool] -or -not $feito) { $failed = 'PATCH /protocols/<id>/checklist/<itemId> (is_done da resposta diferente de true)' }
     }
 }
 
