@@ -370,3 +370,22 @@ export async function updateChecklistItem(protocolId, itemId, { is_done, userId 
     );
     return rows[0] ?? null; // deixa o controller tratar como 404
 }
+
+/**
+ * Lista o histórico de movimentações de um protocolo, do mais antigo para o mais recente (RF06).
+ *
+ * @param {string} protocolId
+ * @returns Promise<{ rows: object[], total: number } | null> - null se o protocolo não existe
+ */
+export async function listHistory(protocolId) {
+    const protocol = await findById(protocolId);
+    if (!protocol) {
+        return null; // deixa o controller tratar como 404
+    }
+
+    const { rows } = await pool.query(
+        'SELECT * FROM protocol_history WHERE protocol_id = $1 ORDER BY changed_at ASC',
+        [protocolId]
+    );
+    return { rows, total: rows.length };
+}

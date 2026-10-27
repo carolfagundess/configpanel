@@ -489,3 +489,25 @@ export async function updateProtocolChecklistItem(req, res) {
         return res.status(500).json({ error: 'Erro interno ao atualizar item do checklist do protocolo.' });
     }
 }
+
+/**
+ * GET /protocols/:id/history
+ * Lista o histórico de movimentações do protocolo (RF06), do mais antigo para o mais recente.
+ */
+export async function listProtocolHistory(req, res) {
+    const { id } = req.params;
+
+    try {
+        const result = await ProtocolsModel.listHistory(id);
+        if (!result) {
+            return res.status(404).json({ error: `Protocolo com id ${id} não encontrado.` });
+        }
+        return res.status(200).json(result);
+    } catch (err) {
+        if (err.code === '22P02') {
+            return res.status(400).json({ error: `Formato de id inválido: ${id}.` });
+        }
+        console.error('Erro ao listar histórico do protocolo:', err);
+        return res.status(500).json({ error: 'Erro interno ao listar histórico do protocolo.' });
+    }
+}
