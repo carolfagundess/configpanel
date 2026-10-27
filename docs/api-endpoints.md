@@ -22,6 +22,7 @@ Backend Node.js/Express. Porta padrão: `3001` (variável `PORT`). Todas as requ
 | POST   | `/protocols/:id/checklist` | Sim | Registra um item no checklist do protocolo |
 | GET    | `/protocols/:id/checklist` | Sim | Lista os itens do checklist do protocolo |
 | PATCH  | `/protocols/:id/checklist/:itemId` | Sim | Marca ou desmarca um item do checklist do protocolo |
+| GET    | `/protocols/:id/history` | Sim | Lista o histórico de movimentações do protocolo |
 
 ## Autenticação
 
@@ -416,6 +417,30 @@ O 400 de `is_done` vem antes de qualquer consulta ao banco: uma requisição com
 ```json
 { "is_done": true }
 ```
+
+### `GET /protocols/:id/history`
+
+🔒 Requer token. Lista o histórico de movimentações de um protocolo existente (RF06), ordenado por `changed_at` crescente (do mais antigo para o mais recente).
+
+**200 OK**
+```json
+{ "rows": [ { "...": "linha do histórico" } ], "total": 1 }
+```
+Cada item de `rows` é uma linha da tabela `protocol_history`: `id`, `protocol_id`, `status` (o status novo), `changed_by`, `changed_at` e `note` (texto `Transição: A → B`). `changed_by` vem sempre `null`, porque a mudança de status ainda não registra quem a fez. `total` é o número de linhas retornadas (`rows.length`); não há paginação.
+
+> Ordem crescente intencional: esta é a única listagem da API do mais antigo para o mais recente. As demais (`GET /protocols` e as de `ips`, `equipamentos`, `comunicacoes` e `checklist`) são decrescentes por `created_at`; o histórico é lido como linha do tempo.
+
+**Respostas**
+
+| Código | Situação |
+|--------|----------|
+| 200    | Histórico do protocolo (vazio, `{ "rows": [], "total": 0 }`, se o protocolo não tem movimentações) |
+| 400    | `id` fora do formato UUID |
+| 401    | Token ausente, inválido ou expirado |
+| 404    | Protocolo não encontrado |
+| 500    | Erro interno |
+
+As linhas são gravadas por `PATCH /protocols/:id`, uma por mudança de status aceita (transições rejeitadas não geram linha), e não podem ser alteradas nem excluídas (RN06). A criação do protocolo (`POST /protocols`, status `RECEBIDO`) não grava linha; por isso um protocolo recém-criado tem histórico vazio.
 
 ---
 

@@ -101,14 +101,14 @@ erDiagram
 |-------|------|------|
 | RN08–RN09: a rede deriva da topologia | Migration 002 | `protocols.network` é *generated column* (`STORED`): `GPON` e `PTP` resultam em `unifique`; qualquer outra topologia resulta em `last_mile`. Não pode ser gravada diretamente |
 | RN10: Last Mile exige método de entrega | Migrations 001 e 002 | `CHECK chk_delivery_method_last_mile`: `network <> 'last_mile' OR delivery_method IS NOT NULL` (recriada na 002, pois o `DROP COLUMN` a removeu) |
-| RN06: histórico imutável | Migration 003 | Triggers `BEFORE UPDATE` e `BEFORE DELETE` em `protocol_history` lançam exceção. Defesa em profundidade: a aplicação também só faz `INSERT` |
+| RN06: histórico imutável | Migration 003 | Triggers `trg_protocol_history_no_update` (`BEFORE UPDATE`) e `trg_protocol_history_no_delete` (`BEFORE DELETE`) em `protocol_history` chamam a função `protocol_history_immutable()`, que lança exceção. Defesa em profundidade: a aplicação também só faz `INSERT` |
 | `updated_at` automático | Migration 001 | Trigger `trg_protocols_updated_at` |
 | Valores de `ownership`, `category` e `item_type` | Migration 001 | `CHECK` com lista fechada de valores |
 
 ## Observações
 
 - **Status** não é uma tabela nem um `ENUM` do banco: é `VARCHAR(50)` e a validação dos 12 estados e das transições fica na máquina de estados da aplicação (`backend/src/state-machine/protocol.state-machine.js`; veja [api-endpoints.md](api-endpoints.md)).
-- **`protocol_history.changed_by`** existe no schema, mas hoje a aplicação não o preenche. O `PATCH /protocols/:id` grava só `protocol_id`, `status` e `note` (texto `Transição: A → B`). O histórico, portanto, ainda não registra quem fez a mudança.
+- **`protocol_history.changed_by`** existe no schema, mas hoje a aplicação não o preenche. O `PATCH /protocols/:id` grava só `protocol_id`, `status` e `note` (texto `Transição: A → B`). O histórico, portanto, ainda não registra quem fez a mudança. A consulta é feita por `GET /protocols/:id/history` (RF06), em ordem crescente de `changed_at`.
 - **`client_communications` e `checklist_items`** existem no schema. `checklist_items`: GET, POST e PATCH (`/protocols/:id/checklist` e `/checklist/:itemId`, RF10) disponíveis. `client_communications` agora tem POST e GET (`/protocols/:id/comunicacoes`, RF09). A regra de checklist completo ao sair da fase técnica está pendente.
 - **`ips` e `equipment`**: `ips` tem POST e GET (`/protocols/:id/ips`); `equipment` tem POST e GET (`/protocols/:id/equipamentos`). A persistência e o `ownership` foram validados diretamente via SQL (ver [devops-log.md](devops-log.md), 09/09/2026).
 - **Dados iniciais:** a migration 001 insere cinco serviços em `services`: Banda Larga, Dedicado, Interconexão, BGP e Wifi Business.
