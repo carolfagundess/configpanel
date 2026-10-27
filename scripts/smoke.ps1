@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-  Smoke test do ConfigPanel: /health, /auth/login, /protocols, POST /protocols/<id>/ips, GET /protocols/<id>/ips, GET /protocols/<id>/equipamentos, POST /protocols/<id>/equipamentos, POST /protocols/<id>/comunicacoes, GET /protocols/<id>/comunicacoes, GET /protocols/<id>/checklist, POST /protocols/<id>/checklist e PATCH /protocols/<id>/checklist/<itemId>.
+  Smoke test do ConfigPanel: /health, /auth/login, /protocols, POST /protocols/<id>/ips, GET /protocols/<id>/ips, GET /protocols/<id>/equipamentos, POST /protocols/<id>/equipamentos, POST /protocols/<id>/comunicacoes, GET /protocols/<id>/comunicacoes, GET /protocols/<id>/checklist, POST /protocols/<id>/checklist, PATCH /protocols/<id>/checklist/<itemId> e GET /protocols/<id>/history.
 
 .DESCRIPTION
-  Roda doze requisicoes em sequencia e imprime, para cada uma, o horario
+  Roda treze requisicoes em sequencia e imprime, para cada uma, o horario
   (Brasilia e UTC), metodo e caminho, status e tempo em ms. Sem retry e com
   timeout de 10 s por requisicao. Nao grava nada em disco e nunca imprime
   a senha nem o token.
@@ -16,6 +16,7 @@
   O passo 10 le o checklist do mesmo protocolo e exige rows como lista (a lista pode ter itens, gravados pelo passo 11 de execucoes anteriores, ou estar vazia).
   O passo 11 grava de verdade um item de checklist (item_type equipment) no mesmo protocolo e confere o item_type na resposta.
   O passo 12 marca como feito (PATCH is_done true) o item de checklist criado no passo 11 e exige 200 com is_done true na resposta.
+  O passo 13 le o historico de movimentacoes do mesmo protocolo e exige rows como lista (vazia ou com itens); so leitura, nao acumula dados.
 
   Limpeza: o smoke acumula dados no protocolo de client_name "SMOKE TESTE" a cada execucao (passos 4, 7, 8 e 11).
   Para limpar os filhos, sem apagar o protocolo (protocol_history e imutavel e bloqueia o DELETE em protocols), rode no Postgres:
@@ -241,6 +242,14 @@ if (-not $failed) {
         try { $feito = ($r.Body | ConvertFrom-Json).is_done } catch { $feito = $null }
         if ($feito -isnot [bool] -or -not $feito) { $failed = 'PATCH /protocols/<id>/checklist/<itemId> (is_done da resposta diferente de true)' }
     }
+}
+
+# 13) GET /protocols/<id>/history (le o historico do protocolo de teste "SMOKE TESTE", reaproveitando o id do passo 4; exige rows como lista, vazia ou com itens)
+if (-not $failed) {
+    $r = Invoke-Step -Method GET -Path "/protocols/$smokeId/history" -Headers @{ Authorization = "Bearer $token" }
+    if ($r.Ok) { $calls2xx++ }
+    if (-not $r.Ok) { $failed = 'GET /protocols/<id>/history' }
+    elseif ($r.Body -notmatch '"rows"\s*:\s*\[') { $failed = 'GET /protocols/<id>/history (rows nao e lista)' }
 }
 
 $total.Stop()

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createProtocol, listProtocols, getProtocolById, updateProtocol, createProtocolIp, listProtocolIps, listProtocolEquipment, createProtocolEquipment, createProtocolCommunication, listProtocolCommunications, listProtocolChecklist, createProtocolChecklistItem, updateProtocolChecklistItem } from "../controllers/protocols.controller.js";
+import { createProtocol, listProtocols, getProtocolById, updateProtocol, createProtocolIp, listProtocolIps, listProtocolEquipment, createProtocolEquipment, createProtocolCommunication, listProtocolCommunications, listProtocolChecklist, createProtocolChecklistItem, updateProtocolChecklistItem, listProtocolHistory } from "../controllers/protocols.controller.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
 
 const router = Router();
@@ -17,5 +17,6 @@ router.get('/protocols/:id/comunicacoes', authMiddleware, listProtocolCommunicat
 router.get('/protocols/:id/checklist', authMiddleware, listProtocolChecklist);
 router.post('/protocols/:id/checklist', authMiddleware, createProtocolChecklistItem);
 router.patch('/protocols/:id/checklist/:itemId', authMiddleware, updateProtocolChecklistItem);
+router.get('/protocols/:id/history', authMiddleware, listProtocolHistory);
 
 export default router;
