@@ -2,8 +2,11 @@ import express from 'express';
 import authRoutes from './routes/auth.routes.js';
 import protocolsRoutes from './routes/protocols.router.js';
 import pool from './database/connection.js';
+import { requestLogger } from './middlewares/request-logger.middleware.js';
 
 const app = express();
+// Log de requisições da série 2 da PoC (fim da medição lido na EC2); desligado nos testes do Jest.
+if (process.env.NODE_ENV !== 'test') app.use(requestLogger());
 app.use(express.json());
 
 // Rota de health check — confirma que o backend está no ar e o banco responde.
