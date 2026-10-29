@@ -13,6 +13,7 @@ function montarApp(linhas) {
   teste.use(express.json());
   const auth = express.Router();
   auth.post('/login', (req, res) => res.json({ token: 'x' }));
+  auth.get('/erro', (req, res, next) => next(new Error('falha simulada')));
   const protocolos = express.Router();
   protocolos.get('/protocols/:id/history', (req, res) => res.json({ rows: [] }));
   protocolos.patch('/protocols/:id/checklist/:itemId', (req, res) => res.json({ is_done: true }));
@@ -56,6 +57,15 @@ describe('requestLogger', () => {
       'POST /auth/login 200',
       'PATCH /protocols/:id/checklist/:itemId 200',
     ]);
+  });
+
+  it('deve manter o prefixo do router quando o handler termina em erro (next(err))', async () => {
+    const linhas = [];
+    await request(montarApp(linhas)).get('/auth/erro');
+    await aguardarLog();
+
+    expect(linhas).toHaveLength(1);
+    expect(linhas[0]).toMatch(/ GET \/auth\/erro 500$/);
   });
 
   it('não deve registrar o Authorization nem o corpo da requisição', async () => {

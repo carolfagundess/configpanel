@@ -9,12 +9,9 @@
   seguinte (docker rm). Por isso, rode este script ANTES do proximo deploy.
 
   Inicio: hora do commit de merge (committer date do GitHub, precisao de 1 s).
-  Fim: para cada ponto de leitura, a primeira linha [req] 2xx daquela rota depois do StartedAt do container,
-  nas duas fontes (horario do middleware e horario do docker logs --timestamps, ambos do relogio da EC2):
-    p08 = POST  /protocols/:id/comunicacoes          (passo 8 do smoke)
-    p10 = GET   /protocols/:id/checklist             (passo 10)
-    p12 = PATCH /protocols/:id/checklist/:itemId     (passo 12)
-    p13 = GET   /protocols/:id/history               (passo 13; equivale ao fim= da serie 1; metrica principal)
+  Fim (p13): a primeira linha [req] 2xx de GET /protocols/:id/history (passo 13 do smoke; equivale ao fim= da serie 1)
+  depois do StartedAt do container, nas duas fontes (horario do middleware e horario do docker logs --timestamps,
+  ambos do relogio da EC2). Todas as linhas [req] vao para a evidencia; passos_2xx_log conta os 13 passos do smoke.
 
   Saida: tabela legivel (Write-Host) e UMA linha CSV no fluxo de saida, na ordem do cabecalho da ficha v2.
   Credenciais e IP: o IP da EC2 vem de -Ec2Ip ou $env:EC2_IP e nunca e impresso.
@@ -22,6 +19,8 @@
 
 .PARAMETER Id
   Id da entrega (4 caracteres, o mesmo do serie2-preparar.ps1).
+.PARAMETER Rodada
+  Numero da rodada (coluna rodada da ficha; 0 = calibracao).
 .PARAMETER Modalidade
   pipeline ou manual (conferida contra os runs do commit de merge).
 .PARAMETER Sha
@@ -44,13 +43,17 @@
 
 .EXAMPLE
   $env:EC2_IP = "<IP_DA_EC2>"
-  .\scripts\serie2-coleta.ps1 -Id C001 -Modalidade pipeline -Sha 1a2b3c4 -NaoEhAmostra -Calibracao
+  .\scripts\serie2-coleta.ps1 -Id C001 -Rodada 0 -Modalidade pipeline -Sha 1a2b3c4 -NaoEhAmostra -Calibracao
 #>
 [CmdletBinding(DefaultParameterSetName = 'Coleta')]
 param(
     [Parameter(Mandatory = $true, ParameterSetName = 'Coleta')]
     [ValidatePattern('^[A-Z0-9]{4}$')]
     [string]$Id,
+
+    [Parameter(Mandatory = $true, ParameterSetName = 'Coleta')]
+    [ValidateRange(0, 999)]
+    [int]$Rodada,
 
     [Parameter(Mandatory = $true, ParameterSetName = 'Coleta')]
     [ValidateSet('pipeline', 'manual')]
@@ -99,13 +102,9 @@ $repoEcr = 'configpanel-backend'
 $container = 'configpanel-backend'
 $caminhoMarcador = 'backend/src/marcador-deploy.js'
 
-# Pontos de leitura do fim (rota no formato do middleware).
-$pontos = @(
-    [pscustomobject]@{ Nome = 'p08'; Metodo = 'POST'; Rota = '/protocols/:id/comunicacoes' },
-    [pscustomobject]@{ Nome = 'p10'; Metodo = 'GET'; Rota = '/protocols/:id/checklist' },
-    [pscustomobject]@{ Nome = 'p12'; Metodo = 'PATCH'; Rota = '/protocols/:id/checklist/:itemId' },
-    [pscustomobject]@{ Nome = 'p13'; Metodo = 'GET'; Rota = '/protocols/:id/history' }
-)
+# Requisicao que marca o fim (p13, ultimo passo do smoke), no formato do middleware.
+$fimMetodo = 'GET'
+$fimRota = '/protocols/:id/history'
 
 # Os 13 passos do smoke (scripts/smoke.ps1), na ordem.
 $passosSmoke = @(
@@ -249,6 +248,7 @@ if ($AutoTeste) {
     $ini = ConvertTo-UtcDate '2026-10-28T23:59:30Z'
     $start = ConvertTo-UtcDate '2026-10-29T00:00:40.123456789Z'
     Assert-Igual 'docker ts com 9 casas' '2026-10-29T00:00:40.123456Z' (Format-Utc $start 'ffffff')
+    Assert-Igual 'tempo ate o container (virada de dia)' '70.123' (Format-Segundos ($start - $ini).TotalSeconds)
 
     $log = @(
         '2026-10-29T00:00:35.000000001Z [req] 2026-10-29T00:00:35.000Z GET /protocols/:id/history 200',
@@ -267,8 +267,8 @@ if ($AutoTeste) {
     Assert-Igual 'p13: tempo middleware (virada de dia)' '82.498' (Format-Segundos ($f.Linha.Mw - $ini).TotalSeconds)
     Assert-Igual 'p13: tempo docker' '82.500' (Format-Segundos ($f.Linha.Docker - $ini).TotalSeconds)
     $f = Get-PrimeiroFim $req 'POST' '/protocols/:id/comunicacoes' $start
-    Assert-Igual 'p08: 201 conta como 2xx' '2026-10-29T00:00:50.100200Z' (Format-Utc $f.Linha.Docker 'ffffff')
-    Assert-Igual 'ponto ausente' 'True' ($null -eq (Get-PrimeiroFim $req 'PATCH' '/protocols/:id/checklist/:itemId' $start))
+    Assert-Igual '201 conta como 2xx' '2026-10-29T00:00:50.100200Z' (Format-Utc $f.Linha.Docker 'ffffff')
+    Assert-Igual 'p13 ausente (so 401 depois do start)' 'True' ($null -eq (Get-PrimeiroFim $req[0..3] 'GET' '/protocols/:id/history' $start))
     Assert-Igual 'passos 2xx do smoke' '3' (Get-Passos2xx $req $passosSmoke $start)
 
     $pull = @(
@@ -426,22 +426,13 @@ try {
     if ($secoes['DF'].Count -gt 0) { $disco = (([string]$secoes['DF'][0]) -split '\s+')[4] }
     if ($startedAt -lt $inicio) { $falhas.Add('container iniciado antes do commit de merge: o deploy desta entrega nao aconteceu') }
 
-    # Fins por ponto de leitura.
+    # Fim (p13) e passos do smoke no log.
     $req = Read-LinhasReq ([string[]]$secoes['REQ'])
-    $valoresPontos = @{}
-    foreach ($p in $pontos) {
-        $f = Get-PrimeiroFim $req $p.Metodo $p.Rota $startedAt
-        if (-not $f) {
-            $falhas.Add("sem linha 2xx de $($p.Metodo) $($p.Rota) ($($p.Nome))")
-            continue
-        }
-        if ($f.Quantas -gt 1) { $avisos.Add("$($p.Nome) com $($f.Quantas) linhas 2xx (smoke rodou mais de uma vez?); usada a primeira") }
-        $valoresPontos["fim_$($p.Nome)_mw_utc"] = Format-Utc $f.Linha.Mw
-        $valoresPontos["fim_$($p.Nome)_docker_utc"] = Format-Utc $f.Linha.Docker 'ffffff'
-        $valoresPontos["tempo_$($p.Nome)_mw_s"] = Format-Segundos ($f.Linha.Mw - $inicio).TotalSeconds
-        $valoresPontos["tempo_$($p.Nome)_docker_s"] = Format-Segundos ($f.Linha.Docker - $inicio).TotalSeconds
-    }
+    $fim = Get-PrimeiroFim $req $fimMetodo $fimRota $startedAt
+    if (-not $fim) { $falhas.Add("sem linha 2xx de $fimMetodo $fimRota (p13)") }
+    elseif ($fim.Quantas -gt 1) { $avisos.Add("p13 com $($fim.Quantas) linhas 2xx (smoke rodou mais de uma vez?); usada a primeira") }
     $passos2xx = Get-Passos2xx $req $passosSmoke $startedAt
+    if ($passos2xx -ne 13) { $avisos.Add("passos do smoke com 2xx no log: $passos2xx/13") }
 
     # Imagem: digest da tag <sha> no ECR deve ser o da imagem em execucao.
     $imgEcr = $null
@@ -586,6 +577,7 @@ try {
 
     $valores = @{
         id                      = $Id
+        rodada                  = $Rodada
         modalidade              = $Modalidade
         gatilho                 = $gatilho
         nao_e_amostra           = $(if ($NaoEhAmostra) { 'sim' } else { 'nao' })
@@ -594,6 +586,7 @@ try {
         inicio_brt              = $inicio.AddHours(-3).ToString('yyyy-MM-dd HH:mm:ss', $inv)
         run_id                  = $runId
         container_started_utc   = (Format-Utc $startedAt 'ffffff')
+        tempo_ate_container_s   = (Format-Segundos ($startedAt - $inicio).TotalSeconds)
         passos_2xx_log          = $passos2xx
         smoke_ok                = $smoke
         comandos                = $(if ($Modalidade -eq 'pipeline') { 0 } else { '' })
@@ -609,7 +602,12 @@ try {
         ambiente                = $(if ($Modalidade -eq 'pipeline') { 'GitHub Actions' } else { $Ambiente })
         observacoes             = ($obs -join '. ')
     }
-    foreach ($k in $valoresPontos.Keys) { $valores[$k] = $valoresPontos[$k] }
+    if ($fim) {
+        $valores['fim_p13_mw_utc'] = Format-Utc $fim.Linha.Mw
+        $valores['fim_p13_docker_utc'] = Format-Utc $fim.Linha.Docker 'ffffff'
+        $valores['tempo_p13_mw_s'] = Format-Segundos ($fim.Linha.Mw - $inicio).TotalSeconds
+        $valores['tempo_p13_docker_s'] = Format-Segundos ($fim.Linha.Docker - $inicio).TotalSeconds
+    }
 
     $campos = foreach ($col in $colunas) {
         if ($valores.ContainsKey($col)) { Format-CsvCampo $valores[$col] } else { '' }
@@ -618,13 +616,9 @@ try {
     # Saida legivel.
     Write-Host ''
     Write-Host "Entrega $Id | $Modalidade | gatilho $gatilho | merge $sha7 em $(Format-Utc $inicio) | container $(Format-Utc $startedAt 'ffffff')"
-    foreach ($p in $pontos) {
-        $k = "tempo_$($p.Nome)_mw_s"
-        if ($valores.ContainsKey($k)) {
-            Write-Host ('  {0} {1,-6} {2,-34} mw {3} s | docker {4} s' -f $p.Nome, $p.Metodo, $p.Rota, $valores[$k], $valores["tempo_$($p.Nome)_docker_s"])
-        }
-        else { Write-Host ('  {0} {1,-6} {2,-34} SEM LINHA 2xx' -f $p.Nome, $p.Metodo, $p.Rota) }
-    }
+    Write-Host "  ate o container: $($valores['tempo_ate_container_s']) s"
+    if ($fim) { Write-Host "  p13 $fimMetodo $fimRota | mw $($valores['tempo_p13_mw_s']) s | docker $($valores['tempo_p13_docker_s']) s" }
+    else { Write-Host "  p13 $fimMetodo $fimRota | SEM LINHA 2xx" }
     Write-Host "  passos do smoke com 2xx no log: $passos2xx/13 | linhas [req]: $($req.Count) | disco: $disco"
     if ($falhas.Count -gt 0) { Write-Host ('  FALHA: ' + ($falhas -join '; ')) }
     foreach ($a in $avisos) { Write-Host "  aviso: $a" }

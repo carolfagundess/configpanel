@@ -5,9 +5,21 @@
 // Não registra cabeçalhos (Authorization), corpo nem IP.
 export function requestLogger(log = console.log) {
     return (req, res, next) => {
+        // A rota é guardada quando o Express a casa (atribuição de req.route), e não no 'finish':
+        // num erro (next(err)) o Express restaura req.baseUrl ao sair do router e o prefixo (/auth) se perderia.
+        let rota = null;
+        let route;
+        Object.defineProperty(req, 'route', {
+            configurable: true,
+            enumerable: true,
+            get: () => route,
+            set: (r) => {
+                route = r;
+                if (r) rota = (req.baseUrl || '') + r.path;
+            },
+        });
         res.on('finish', () => {
-            const rota = req.route ? req.baseUrl + req.route.path : req.originalUrl.split('?')[0];
-            log(`[req] ${new Date().toISOString()} ${req.method} ${rota} ${res.statusCode}`);
+            log(`[req] ${new Date().toISOString()} ${req.method} ${rota ?? req.originalUrl.split('?')[0]} ${res.statusCode}`);
         });
         next();
     };

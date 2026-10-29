@@ -5,7 +5,8 @@
 
 .DESCRIPTION
   Passos:
-    1) exige arvore limpa, branch main e main igual a origin/main;
+    1) exige arvore limpa (exceto docs/ficha-coleta-serie2.csv e docs/evidencias-serie2/, alterados pela coleta
+       e versionados no PR de docs do fim da rodada), index vazio, branch main e main igual a origin/main;
     2) confere a alternancia estrita pipeline/manual pela ultima linha de docs/ficha-coleta-serie2.csv
        e recusa um Id que ja esteja na ficha;
     3) recusa se houver outro PR aberto da serie 2 (branch serie2/e*);
@@ -56,6 +57,8 @@ $raiz = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $ficha = Join-Path $raiz 'docs\ficha-coleta-serie2.csv'
 $caminhoMarcador = 'backend/src/marcador-deploy.js'
 $padraoMarcador = "(?m)^export const MARCADOR_DEPLOY = 'serie2-[A-Z0-9]{4}';"
+# Caminhos que a rodada altera localmente e que nao contam como arvore suja (pathspecs do git status).
+$caminhosDaRodada = @(':(exclude)docs/ficha-coleta-serie2.csv', ':(exclude)docs/evidencias-serie2')
 
 function Invoke-Git {
     param([string[]]$GitArgs)
@@ -80,8 +83,12 @@ $criouBranch = $false
 
 Push-Location $raiz
 try {
-    # 1) Arvore limpa, na main, igual a origin/main.
-    if (Invoke-Git @('status', '--porcelain')) { throw 'a arvore de trabalho nao esta limpa (git status); PARE' }
+    # 1) Arvore limpa (fora a ficha v2 e as evidencias da rodada), nada no index, na main, igual a origin/main.
+    #    A ficha e as evidencias acompanham o git switch sem entrar no commit do gatilho (nao estao no index)
+    #    e sao versionadas no PR de docs do fim da rodada.
+    $sujos = Invoke-Git (@('status', '--porcelain', '--', '.') + $caminhosDaRodada)
+    if ($sujos) { throw "a arvore de trabalho tem alteracoes fora da ficha v2 e das evidencias; PARE:`n$sujos" }
+    if (Invoke-Git @('diff', '--cached', '--name-only')) { throw 'ha arquivos no index (git add); o commit do gatilho so pode levar o marcador. Rode git restore --staged .' }
     $atual = Invoke-Git @('rev-parse', '--abbrev-ref', 'HEAD')
     if ($atual -ne 'main') { throw "a branch atual e '$atual'; rode a partir da main" }
     Invoke-Git @('fetch', '--quiet', 'origin', 'main') | Out-Null
@@ -115,6 +122,7 @@ try {
     # 5) Commit do gatilho.
     if ($Gatilho -eq 'vazio') {
         Invoke-Git @('commit', '--quiet', '--allow-empty', '-m', $titulo) | Out-Null
+        if (Invoke-Git @('diff-tree', '--no-commit-id', '--name-only', '-r', 'HEAD')) { throw 'o commit vazio levou arquivos; confira o index' }
     }
     else {
         $arquivo = Join-Path $raiz $caminhoMarcador
@@ -129,6 +137,7 @@ try {
         $numstat = Invoke-Git @('diff', '--cached', '--numstat')
         if ($numstat -ne "1`t1`t$caminhoMarcador") { throw "diff inesperado do marcador: $numstat" }
         Invoke-Git @('commit', '--quiet', '-m', $titulo) | Out-Null
+        if ((Invoke-Git @('diff-tree', '--no-commit-id', '--name-only', '-r', 'HEAD')) -ne $caminhoMarcador) { throw 'o commit do marcador levou outros arquivos' }
     }
 
     # 6) Push, PR e conferencia do diff.
@@ -139,7 +148,7 @@ try {
     else {
         'Modalidade pipeline: Squash and merge sem alterar o titulo.'
     }
-    $corpo = "Entrega $Id da serie 2 da PoC (modalidade $Modalidade, gatilho $Gatilho), preparada por scripts/serie2-preparar.ps1.`n`n$lembrete`n`nDepois do merge: scripts/serie2-coleta.ps1 -Id $Id -Modalidade $Modalidade -Sha <sha do merge>, antes do proximo deploy."
+    $corpo = "Entrega $Id da serie 2 da PoC (modalidade $Modalidade, gatilho $Gatilho), preparada por scripts/serie2-preparar.ps1.`n`n$lembrete`n`nDepois do merge: scripts/serie2-coleta.ps1 -Id $Id -Rodada <n> -Modalidade $Modalidade -Sha <sha do merge>, antes do proximo deploy."
     $url = Invoke-Gh @('pr', 'create', '--base', 'main', '--head', $branch, '--title', $titulo, '--body', $corpo)
     $pr = (Invoke-Gh @('pr', 'view', $branch, '--json', 'number')) | ConvertFrom-Json
     $numero = [string]$pr.number
@@ -181,7 +190,7 @@ try {
     Write-Host "PRONTO (sem merge): $url"
     Write-Host "Titulo: $titulo"
     Write-Host $lembrete
-    Write-Host "Depois do merge: .\scripts\serie2-coleta.ps1 -Id $Id -Modalidade $Modalidade -Sha <sha do merge>  (antes do proximo deploy)"
+    Write-Host "Depois do merge: .\scripts\serie2-coleta.ps1 -Id $Id -Rodada <n> -Modalidade $Modalidade -Sha <sha do merge>  (antes do proximo deploy)"
 }
 catch {
     [Console]::Error.WriteLine('ERRO: ' + $_.Exception.Message)
