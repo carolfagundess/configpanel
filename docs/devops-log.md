@@ -677,3 +677,12 @@ Run #38: criado 01:18:37, fim 01:20:48. Run #40: criado 01:40:14, fim 01:42:12. 
 (3) **Assimetria: `node:24-alpine` sem digest.** A imagem base não está fixada por digest: o runner baixa a versão atual da tag a cada build e o PC usa a que está em cache. Se a tag for atualizada durante a série, as bases deixam de ser iguais entre as modalidades.
 (4) **Limitação (não corrigida):** com JSON malformado no corpo, o tratador de erros padrão do Express escreve o stack do `SyntaxError` no stderr do container (o middleware não causa isso e registra só `POST /auth/login 400`). Em versões novas do Node, a mensagem do `SyntaxError` pode trazer um trecho do corpo enviado, que iria parar no log. Fica registrado como limitação para não alterar a API fora do escopo da PoC.
 (5) Nenhum IP real da EC2, ID de conta AWS nem valor de segredo é registrado neste log.
+
+## [2026-10-28] Série 2: roteiro manual próprio (roteiro-manual-serie2.md v2.0)
+
+**Fase da trilha:** Transversal (DevOps-6, série 2 da PoC)
+**Contexto:** o `roteiro-manual.md` v1.4 conflitava com a ficha v2 e com a árvore de trabalho da série 2: o A2 exigia árvore limpa, mas a ficha e as evidências ficam alteradas durante a rodada; e o C3, o C4 e o preenchimento à mão da ficha foram substituídos pela coleta. Horário em BRT.
+**O que foi feito:** criado `docs/roteiro-manual-serie2.md` (v2.0), só para a série 2; o v1.4 fica como histórico da série 1 e ganhou uma linha apontando para o novo. Mudanças: o A2 aceita só `docs/ficha-coleta-serie2.csv` modificada e `docs/evidencias-serie2/` não rastreada; sem w32tm; o C3 e o C4 saem e o B14 passa a ser só `exit` (sem copiar o history da EC2); o B6 tem versão instrumentada (`time` e `tee`) só na calibração; a `serie2-coleta.ps1` substitui o preenchimento à mão (ficam à mão só `comandos`, `intervencoes` e `dados_sensiveis_manuais`). Os 15 comandos D são os mesmos do v1.4. O `roteiro-serie2.md` (v1.3) passa a só resumir e apontar para o novo roteiro.
+**Evidência:** branch `docs/serie2-roteiro-manual`.
+**Métrica (se aplicável):** não se aplica.
+**Observações:** nenhum IP real da EC2, ID de conta AWS nem valor de segredo é registrado neste log.

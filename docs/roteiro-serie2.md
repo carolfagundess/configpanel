@@ -1,6 +1,7 @@
 # Roteiro da série 2 (deploy do mesmo código, pipeline × manual)
 
-Versão 1.2, 28/10/2026. Base: decisões da orientação de 27/10 e da Carol (28/10). A série 2 **não se mistura** com a série 1: ficha própria (`docs/ficha-coleta-serie2.csv`) e evidências em `docs/evidencias-serie2/`. A série 2 mede a entrega, não o produto.
+Versão 1.3, 28/10/2026. Base: decisões da orientação de 27/10 e da Carol (28/10). A série 2 **não se mistura** com a série 1: ficha própria (`docs/ficha-coleta-serie2.csv`) e evidências em `docs/evidencias-serie2/`. A série 2 mede a entrega, não o produto.
+Changelog v1.3: os comandos da entrega manual passam para `docs/roteiro-manual-serie2.md` (v2.0); aqui fica só o resumo.
 Changelog v1.2: métrica principal passa a ser `tempo_ate_container_s` (entrega pura); o p13 vira métrica secundária; o smoke continua rodando e registrado, mas fora do cronômetro principal; limitação do `StartedAt` registrada.
 Changelog v1.1: fim só no p13 (p08, p10 e p12 saíram: com o mesmo código em todas as entregas, não acrescentam informação); colunas `rodada` e `tempo_ate_container_s`; `git pull --ff-only` antes de cada preparação; PR de docs no fim da rodada; limpeza das branches `serie2/*`.
 
@@ -44,12 +45,9 @@ Changelog v1.1: fim só no p13 (p08, p10 e p12 saíram: com o mesmo código em t
 3. Esperar o run de push na main terminar.
 4. `$env:EC2_IP = "<IP_DA_EC2>"` e `.\scripts\serie2-coleta.ps1 -Id <Id> -Rodada <n> -Modalidade pipeline -Sha <sha do merge>` → colar a linha CSV na ficha v2.
 
-## Entrega manual (mudanças em relação ao `roteiro-manual.md` v1.4)
+## Entrega manual
 
-- **Antes de começar:** sai a conferência do relógio (w32tm, Set-Date, a.ntp.br). Sai "código do incremento pronto": em vez disso, `git switch main; git pull --ff-only` e `.\scripts\serie2-preparar.ps1 -Id <Id> -Modalidade manual -Gatilho <vazio|marcador>`. Na ficha, só o `id` é anotado antes; o resto vem da coleta.
-- **Merge:** igual (Squash and merge com ` [skip ci]` digitado à mão no fim do título).
-- **Partes A e B:** iguais (15 comandos D, testes locais no A8). O A10 continua com `$SHA = git rev-parse HEAD`: a tag `:$SHA` no ECR é como a coleta acha a imagem da entrega.
-- **Parte C:** o C2 (smoke) continua; o C4 sai. Depois do smoke (fora do tempo e da contagem): `.\scripts\serie2-coleta.ps1 -Id <Id> -Rodada <n> -Modalidade manual -Sha $SHA -SmokeOk <sim|nao>`, e preencher à mão `comandos`, `intervencoes` e `dados_sensiveis_manuais`.
+Seguir **`docs/roteiro-manual-serie2.md`** (v2.0), que tem todos os comandos. Resumo: o PR vem do `serie2-preparar.ps1`; merge com ` [skip ci]` no título; partes A e B com os mesmos 15 comandos D do v1.4 (o A2 aceita a ficha e as evidências alteradas); sem w32tm, sem C3/C4 e sem history da EC2; depois do smoke, a `serie2-coleta.ps1` gera a linha da ficha.
 
 ## Calibração (4 entregas, todas `nao_e_amostra=sim`)
 
