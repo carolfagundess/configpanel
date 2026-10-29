@@ -654,6 +654,12 @@ Run #38: criado 01:18:37, fim 01:20:48. Run #40: criado 01:40:14, fim 01:42:12. 
 - Conferência das rotas: o `app.js` real, com o log ligado, recebeu as 13 requisições do smoke (mesmos métodos e caminhos, com ids e query de exemplo). As 13 rotas registradas são exatamente as da lista `$passosSmoke` do `serie2-coleta.ps1`, inclusive `GET /protocols` (sem `?limit=200`), `POST /auth/login` e o p13 (`GET /protocols/:id/history`).
 - Marcador neutro `backend/src/marcador-deploy.js` (não importado por nenhum módulo), para o gatilho alternativo de 1 linha, do mesmo tamanho em toda entrega.
 - `docs/ficha-coleta-serie2.csv`, a ficha v2. Tem `rodada` e `tempo_ate_container_s` (`StartedAt` do container menos o commit de merge). O fim é só o p13, a primeira linha `[req]` 2xx de `GET /protocols/:id/history`, nas duas fontes (middleware e `docker logs --timestamps`). Tem também `passos_2xx_log`, com 13/13 esperado. Não há colunas de relógio do PC. Decisão da Carol (28/10): os pontos p08, p10 e p12 saíram, porque com o mesmo código em todas as entregas não acrescentam informação.
+- Métricas (roteiro v1.2, decisão da Carol de 28/10): a série 2 mede a entrega, não o produto.
+  - **Métrica principal:** `tempo_ate_container_s`, do commit de merge até o `StartedAt` do container novo. É a entrega pura e não depende de rota nem do smoke.
+  - **Métrica secundária:** tempo até a primeira linha 2xx de `GET /protocols/:id/history` (p13), que inclui a execução do smoke e liga com o `fim=` da série 1.
+  - O smoke continua rodando e é registrado em `smoke_ok` e `passos_2xx_log` (esperado 13/13), mas não entra no cronômetro principal.
+  - **Limitação:** o `StartedAt` indica container iniciado, não aplicação pronta; o intervalo até a porta abrir fica de fora, igual nas duas modalidades.
+  - Nenhum cálculo nem coluna da ficha mudou; só a hierarquia das métricas.
 - `docs/roteiro-serie2.md`, `scripts/serie2-preparar.ps1` e `scripts/serie2-coleta.ps1`:
   - o preparar cria a branch, faz o commit, o push e o PR e espera os checks; nunca faz merge;
   - a coleta é somente leitura no GitHub, na AWS e na EC2, e grava todas as linhas `[req]` como evidência, porque o log some no deploy seguinte.

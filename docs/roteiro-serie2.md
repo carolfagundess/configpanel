@@ -1,6 +1,7 @@
 # Roteiro da série 2 (deploy do mesmo código, pipeline × manual)
 
-Versão 1.1, 28/10/2026. Base: decisões da orientação de 27/10 e da Carol (28/10). A série 2 **não se mistura** com a série 1: ficha própria (`docs/ficha-coleta-serie2.csv`) e evidências em `docs/evidencias-serie2/`.
+Versão 1.2, 28/10/2026. Base: decisões da orientação de 27/10 e da Carol (28/10). A série 2 **não se mistura** com a série 1: ficha própria (`docs/ficha-coleta-serie2.csv`) e evidências em `docs/evidencias-serie2/`. A série 2 mede a entrega, não o produto.
+Changelog v1.2: métrica principal passa a ser `tempo_ate_container_s` (entrega pura); o p13 vira métrica secundária; o smoke continua rodando e registrado, mas fora do cronômetro principal; limitação do `StartedAt` registrada.
 Changelog v1.1: fim só no p13 (p08, p10 e p12 saíram: com o mesmo código em todas as entregas, não acrescentam informação); colunas `rodada` e `tempo_ate_container_s`; `git pull --ff-only` antes de cada preparação; PR de docs no fim da rodada; limpeza das branches `serie2/*`.
 
 ## O que é uma entrega
@@ -12,9 +13,10 @@ Changelog v1.1: fim só no p13 (p08, p10 e p12 saíram: com o mesmo código em t
 - **Id**: 4 caracteres, sempre do mesmo tamanho (`C001` a `C004` na calibração; `0001` em diante nas amostras).
 - **Rodada**: número informado na coleta (`-Rodada`; 0 = calibração). Uma rodada é uma sessão de entregas seguidas, fechada pelo PR de docs (abaixo).
 - **Início** = hora do commit de merge (servidor do GitHub, precisão de 1 s).
-- **Fim (p13)** = primeira linha `[req]` 2xx de `GET /protocols/:id/history` (passo 13 do smoke, equivalente ao `fim=` da série 1) depois do `StartedAt` do container, lida no log da EC2 nas duas fontes: horário do middleware (`tempo_p13_mw_s`) e do `docker logs --timestamps` (`tempo_p13_docker_s`).
-- **Até o container** (`tempo_ate_container_s`) = `StartedAt` do container menos o início.
-- **Conferência:** `passos_2xx_log` conta quantos dos 13 passos do smoke têm linha 2xx no log (esperado 13/13). Todas as linhas `[req]` vão para a evidência.
+- **Métrica principal: até o container** (`tempo_ate_container_s`) = `StartedAt` do container novo menos o início (commit de merge). É a entrega pura: não depende de rota nem do smoke.
+- **Métrica secundária: fim (p13)** = primeira linha `[req]` 2xx de `GET /protocols/:id/history` (passo 13 do smoke) depois do `StartedAt` do container, lida no log da EC2 nas duas fontes: horário do middleware (`tempo_p13_mw_s`) e do `docker logs --timestamps` (`tempo_p13_docker_s`). Inclui a execução do smoke e liga com o `fim=` da série 1.
+- **Smoke:** continua rodando e é registrado em `smoke_ok` e `passos_2xx_log` (quantos dos 13 passos têm linha 2xx no log; esperado 13/13), mas não entra no cronômetro principal. Todas as linhas `[req]` vão para a evidência.
+- **Limitação:** o `StartedAt` indica container iniciado, não aplicação pronta. O intervalo até a porta abrir fica fora da métrica principal, igual nas duas modalidades.
 - Sem ajuste nem medição do relógio do PC: início e fim vêm de relógios de servidor (GitHub e EC2).
 
 ## Regras novas
@@ -77,7 +79,7 @@ Na coleta, usar `-Rodada 0 -NaoEhAmostra -Calibracao`. O relatório vai para `do
 5. o digest da imagem em cada entrega;
 6. as camadas enviadas ao ECR e baixadas na EC2;
 7. a duração dos steps (pipeline) e dos comandos de build, login, push e pull (manual);
-8. o tempo até o container e até o p13, nas duas fontes.
+8. o tempo até o container (métrica principal) e até o p13 (métrica secundária), nas duas fontes.
 
 ## Camadas do Dockerfile e o que o gatilho muda
 
