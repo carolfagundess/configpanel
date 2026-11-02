@@ -8,7 +8,9 @@
     1) exige arvore limpa (exceto docs/ficha-coleta-serie2.csv e docs/evidencias-serie2/, alterados pela coleta
        e versionados no PR de docs do fim da rodada), index vazio, branch main e main igual a origin/main;
     2) confere a alternancia estrita pipeline/manual pela ultima linha de docs/ficha-coleta-serie2.csv
-       e recusa um Id que ja esteja na ficha;
+       e recusa um Id que ja esteja na ficha. A alternancia vale so DENTRO da mesma rodada: se a rodada
+       pedida for maior que a da ultima linha (ex.: 0010 na rodada 1 e 0011 na rodada 2), a primeira entrega
+       da rodada nova aceita qualquer modalidade. Rodada menor que a da ultima linha e recusada;
     3) recusa se houver outro PR aberto da serie 2 (branch serie2/e*);
     4) cria a branch serie2/e<Id>-<modalidade>-<gatilho> a partir de origin/main;
     5) gatilho "vazio": git commit --allow-empty (0 arquivos);
@@ -29,6 +31,10 @@
   pipeline ou manual.
 .PARAMETER Gatilho
   vazio (commit vazio) ou marcador (1 linha em backend/src/marcador-deploy.js).
+.PARAMETER Rodada
+  Opcional. Por padrao e deduzida do Id: C... = 0 (calibracao); 0001-0010 = 1; 0011-0020 = 2; e assim por diante
+  (10 entregas por rodada). Informe so para um Id fora desse padrao; se o Id permitir deduzir e o valor
+  informado for outro, o script recusa.
 .PARAMETER IgnorarAlternancia
   Pula a conferencia de alternancia (ex.: repetir uma entrega invalidada). Registrar o motivo nas observacoes.
 
@@ -48,6 +54,9 @@ param(
     [Parameter(Mandatory = $true)]
     [ValidateSet('vazio', 'marcador')]
     [string]$Gatilho,
+
+    [ValidateRange(0, 999)]
+    [int]$Rodada = -1,
 
     [switch]$IgnorarAlternancia
 )
@@ -77,6 +86,40 @@ function Invoke-Gh {
     return ($saida -join "`n")
 }
 
+# Rodada pelo Id: C... = 0; numerico 0001-0010 = 1, 0011-0020 = 2, ...; -1 se o Id nao seguir o padrao.
+function Get-RodadaDoId {
+    param([string]$Id)
+    if ($Id -match '^C') { return 0 }
+    if ($Id -match '^\d{4}$' -and [int]$Id -ge 1) { return [int][math]::Floor(([int]$Id - 1) / 10) + 1 }
+    return -1
+}
+
+# Alternancia estrita so dentro da mesma rodada. Devolve '' se a entrega pode seguir, ou o motivo da recusa.
+function Test-Alternancia {
+    param($Anterior, [int]$Rodada, [string]$Modalidade)
+    if ($null -eq $Anterior) { return '' }
+    $rodadaAnterior = -1
+    if (-not [int]::TryParse([string]$Anterior.rodada, [ref]$rodadaAnterior)) { $rodadaAnterior = -1 }
+    if ($rodadaAnterior -ge 0 -and $Rodada -lt $rodadaAnterior) {
+        return "a rodada $Rodada e anterior a da ultima entrega da ficha ($($Anterior.id), rodada $rodadaAnterior)"
+    }
+    # Rodada anterior desconhecida (coluna vazia): mantem a trava, por precaucao.
+    $mesmaRodada = $rodadaAnterior -lt 0 -or $Rodada -eq $rodadaAnterior
+    if ($mesmaRodada -and $Anterior.modalidade -eq $Modalidade) {
+        return "a ultima entrega da ficha ($($Anterior.id), rodada $($Anterior.rodada)) tambem e $Modalidade; a alternancia e estrita dentro da rodada"
+    }
+    return ''
+}
+
+$rodadaDoId = Get-RodadaDoId $Id
+if ($Rodada -lt 0) {
+    if ($rodadaDoId -lt 0) { [Console]::Error.WriteLine("ERRO: nao da para deduzir a rodada do Id $Id; informe -Rodada"); exit 1 }
+    $Rodada = $rodadaDoId
+}
+elseif ($rodadaDoId -ge 0 -and $Rodada -ne $rodadaDoId) {
+    [Console]::Error.WriteLine("ERRO: -Rodada $Rodada nao confere com o Id $Id (rodada $rodadaDoId)"); exit 1
+}
+
 $branch = "serie2/e$($Id.ToLower())-$Modalidade-$Gatilho"
 $titulo = "serie2: entrega $Id ($Modalidade, gatilho $Gatilho)"
 $criouBranch = $false
@@ -96,16 +139,15 @@ try {
         throw 'a main local difere de origin/main; rode git pull --ff-only'
     }
 
-    # 2) Alternancia estrita e Id inedito, pela ficha v2.
+    # 2) Alternancia estrita (dentro da rodada) e Id inedito, pela ficha v2.
     if (-not (Test-Path -LiteralPath $ficha)) { throw "ficha nao encontrada: docs\ficha-coleta-serie2.csv" }
     $linhas = @(Import-Csv -LiteralPath $ficha -Encoding UTF8)
     if (@($linhas | Where-Object { $_.id -eq $Id }).Count -gt 0) { throw "o Id $Id ja esta na ficha v2" }
-    if ($linhas.Count -gt 0) {
-        $anterior = $linhas[$linhas.Count - 1]
-        if ($anterior.modalidade -eq $Modalidade -and -not $IgnorarAlternancia) {
-            throw "a ultima entrega da ficha ($($anterior.id)) tambem e $Modalidade; a alternancia e estrita (use -IgnorarAlternancia so com motivo registrado)"
-        }
+    if ($linhas.Count -gt 0 -and -not $IgnorarAlternancia) {
+        $motivo = Test-Alternancia $linhas[$linhas.Count - 1] $Rodada $Modalidade
+        if ($motivo) { throw "$motivo (use -IgnorarAlternancia so com motivo registrado)" }
     }
+    Write-Host "Entrega $Id, rodada $Rodada, $Modalidade."
 
     # 3) Nenhum outro PR da serie 2 aberto.
     $abertos = @((Invoke-Gh @('pr', 'list', '--state', 'open', '--json', 'number,headRefName')) | ConvertFrom-Json |
@@ -148,7 +190,8 @@ try {
     else {
         'Modalidade pipeline: Squash and merge sem alterar o titulo.'
     }
-    $corpo = "Entrega $Id da serie 2 da PoC (modalidade $Modalidade, gatilho $Gatilho), preparada por scripts/serie2-preparar.ps1.`n`n$lembrete`n`nDepois do merge: scripts/serie2-coleta.ps1 -Id $Id -Rodada <n> -Modalidade $Modalidade -Sha <sha do merge>, antes do proximo deploy."
+    # Comandos entre crases (inline code): sem elas o Markdown do GitHub engole os placeholders entre < e >.
+    $corpo = "Entrega $Id da serie 2 da PoC (modalidade $Modalidade, gatilho $Gatilho), preparada por ``scripts/serie2-preparar.ps1``.`n`n$lembrete`n`nDepois do merge, antes do proximo deploy: ``.\scripts\serie2-coleta.ps1 -Id $Id -Rodada <n> -Modalidade $Modalidade -Sha <sha do merge>``"
     $url = Invoke-Gh @('pr', 'create', '--base', 'main', '--head', $branch, '--title', $titulo, '--body', $corpo)
     $pr = (Invoke-Gh @('pr', 'view', $branch, '--json', 'number')) | ConvertFrom-Json
     $numero = [string]$pr.number
@@ -164,14 +207,28 @@ try {
     if ($diff -ne $esperado) { throw "o PR #$numero tem diff $diff (arquivos/+/-); esperado $esperado. Feche o PR" }
 
     # 7) Checks obrigatorios e mergeStateStatus.
-    Write-Host "PR #$numero aberto; esperando os checks obrigatorios..."
+    #    Logo depois do pr create o gh responde "no checks reported" (codigo 1): repete a cada 5 s, ate 120 s.
+    #    O ErrorActionPreference fica em Continue durante a chamada porque, no Windows PowerShell 5.1, o stderr
+    #    de um executavel redirecionado com Stop vira erro terminante e abortava o script na primeira tentativa.
+    Write-Host "PR #$numero aberto; esperando os checks aparecerem..."
+    $limiteChecksS = 120
+    $relogio = [System.Diagnostics.Stopwatch]::StartNew()
     $registrados = $false
-    for ($i = 0; $i -lt 12 -and -not $registrados; $i++) {
-        $null = & gh pr checks $numero --required 2>$null
+    while (-not $registrados) {
+        $eap = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        try { $null = & gh pr checks $numero --required 2>&1; $codigo = $LASTEXITCODE }
+        finally { $ErrorActionPreference = $eap }
         # 0 = todos passaram; 8 = pendentes. Qualquer um dos dois indica que os checks ja foram registrados.
-        if ($LASTEXITCODE -eq 0 -or $LASTEXITCODE -eq 8) { $registrados = $true } else { Start-Sleep -Seconds 5 }
+        if ($codigo -eq 0 -or $codigo -eq 8) { $registrados = $true; break }
+        if ($relogio.Elapsed.TotalSeconds -ge $limiteChecksS) { break }
+        Start-Sleep -Seconds 5
     }
-    if (-not $registrados) { throw "os checks do PR #$numero nao apareceram em 60 s" }
+    if (-not $registrados) {
+        throw ("os checks do PR #$numero nao apareceram em $limiteChecksS s (nenhum merge foi feito). " +
+            "Acompanhe a mao com: gh pr checks $numero --watch ; quando passarem, confira o mergeStateStatus CLEAN no PR e volte para a main (git switch main)")
+    }
+    Write-Host "Checks registrados em $([int]$relogio.Elapsed.TotalSeconds) s; esperando a conclusao dos obrigatorios..."
     & gh pr checks $numero --required --watch --fail-fast --interval 10
     if ($LASTEXITCODE -ne 0) { throw "checks obrigatorios do PR #$numero falharam" }
 

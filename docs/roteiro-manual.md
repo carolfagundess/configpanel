@@ -1,3 +1,5 @@
+Para a série 2, use docs/roteiro-manual-serie2.md.
+
 # Roteiro manual final (modalidade manual da PoC)
 
 Versão 1.4, 12/10/2026. Changelog v1.4: variável `$EC2_IP` (A15, C1); A9, B7 e B14 esclarecidos; C3 com `EndExecutionTime`; regras de contagem e de início da amostra. Baseado no ensaio manual de 11/10 e na decisão de 11/10 (opção 4: merge com [skip ci] e deploy manual a partir da main).
