@@ -1,7 +1,8 @@
 # Roteiro manual da série 2 (entrega manual, deploy do mesmo código)
 
-Versão 2.0, 28/10/2026. Substitui o `roteiro-manual.md` v1.4 **apenas para a série 2**; o v1.4 continua valendo como histórico da série 1. Contexto, métricas e calibração da série 2: `docs/roteiro-serie2.md`.
+Versão 2.1, 30/10/2026. Substitui o `roteiro-manual.md` v1.4 **apenas para a série 2**; o v1.4 continua valendo como histórico da série 1. Contexto, métricas e calibração da série 2: `docs/roteiro-serie2.md`.
 Princípio: a série 2 mede a entrega, não o produto.
+Changelog v2.1 (correções da calibração C001-C004): `Test-NetConnection` e `docker-compose up -d postgres` passam para antes do merge (o A4 só confere); o B6 vira duas linhas (B6-cal e B6-serie); regra de contagem de incidentes explícita.
 Regra: um comando por vez, mesma janela do PowerShell do início ao fim, de casa ou do hotspot (o firewall do IFSul bloqueia 22 e 3001). Não reiniciar a EC2. Nunca `docker stop`/`docker rm` no `configpanel-postgres`. Nenhum segredo digitado ou colado em chat.
 
 Tipos: **D** = comando de deploy, **P** = preparação/verificação (contados separados). Intervenção = qualquer coisa fora deste roteiro (erro, retentativa, improviso).
@@ -9,6 +10,8 @@ Tipos: **D** = comando de deploy, **P** = preparação/verificação (contados s
 ## Antes do merge (fora do tempo)
 - Docker Desktop ligado; `docker version --format '{{.Server.Version}}'` e `aws sts get-caller-identity --query Account --output text` funcionando.
 - Na janela que será usada até o fim: `$EC2_IP = "<IP_DA_EC2>"` e `$env:EC2_IP = $EC2_IP` (o IP real só no terminal, nunca em arquivo).
+- P: `Test-NetConnection $EC2_IP -Port 22` (esperado `TcpTestSucceeded : True`; senão PARE: IP errado).
+- P: `docker-compose up -d postgres` (o A4 só confere que ele está rodando).
 - O PR da entrega vem de `git switch main; git pull --ff-only` e `.\scripts\serie2-preparar.ps1 -Id <Id> -Modalidade manual -Gatilho <vazio|marcador>` (substitui "código do incremento pronto"; o script espera os checks e o `CLEAN` e não faz merge).
 - Sem conferência de relógio (o w32tm sai) e sem preencher a ficha à mão antes: a linha vem da coleta.
 
@@ -25,7 +28,7 @@ Tipos: **D** = comando de deploy, **P** = preparação/verificação (contados s
 | A1 | P | `git switch main; git pull --ff-only` |
 | A2 | P | `git status` (podem aparecer SOMENTE `docs/ficha-coleta-serie2.csv` modificada e `docs/evidencias-serie2/` não rastreada; qualquer outro arquivo = PARE). Mudança em relação ao v1.4, que exigia árvore limpa. |
 | A3 | P | `git rev-parse HEAD` (deve ser igual ao SHA do merge; senão PARE) |
-| A4 | P | `docker-compose up -d postgres` |
+| A4 | P | `docker inspect -f '{{.State.Status}}' configpanel-postgres` (esperado `running`; senão PARE: o `up -d` é antes do merge) |
 | A5 | P | `npm --prefix backend install` |
 | A6 | P | `$env:DB_HOST = "localhost"` |
 | A7 | P | `npm --prefix backend run migrate` |
@@ -46,7 +49,8 @@ Tipos: **D** = comando de deploy, **P** = preparação/verificação (contados s
 | B3 | D | `umask 077; docker inspect configpanel-backend --format '{{range .Config.Env}}{{println .}}{{end}}' \| grep -E '^(DB_USER\|DB_PASSWORD\|JWT_SECRET)=' > ~/backend.env` |
 | B4 | P | `wc -l ~/backend.env` (deve mostrar 3; senão PARE) |
 | B5 | D | `aws ecr get-login-password --region us-east-2 \| docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.us-east-2.amazonaws.com` |
-| B6 | D | **Série:** `docker pull $ACCOUNT_ID.dkr.ecr.us-east-2.amazonaws.com/configpanel-backend:latest`<br>**Só na calibração:** `time docker pull $ACCOUNT_ID.dkr.ecr.us-east-2.amazonaws.com/configpanel-backend:latest 2>&1 \| tee ~/serie2-pull.txt` (anotar o `real` do `time`, em segundos) |
+| B6-cal | D | **Só na calibração. Execute APENAS UMA das duas linhas B6.** `time docker pull $ACCOUNT_ID.dkr.ecr.us-east-2.amazonaws.com/configpanel-backend:latest 2>&1 \| tee ~/serie2-pull.txt` (anotar o `real` do `time`, em segundos) |
+| B6-serie | D | **Só nas amostras da série. Execute APENAS UMA das duas linhas B6.** `docker pull $ACCOUNT_ID.dkr.ecr.us-east-2.amazonaws.com/configpanel-backend:latest` |
 | B7 | D | `docker stop configpanel-backend` (espere o nome do contêiner voltar na tela, pode levar ~10 s, antes de digitar o B8) |
 | B8 | D | `docker rm configpanel-backend` |
 | B9 | D | `docker run -d --name configpanel-backend --network configpanel-net --env-file ~/backend.env -e DB_HOST=configpanel-postgres -e DB_PORT=5432 -e DB_NAME=configpanel -e JWT_EXPIRES_IN=8h -e PORT=3001 -p 3001:3001 $ACCOUNT_ID.dkr.ecr.us-east-2.amazonaws.com/configpanel-backend:latest` |
@@ -74,8 +78,8 @@ O C3 (Get-History em tabela) e o C4 (`git log %cI`) do v1.4 saem: a coleta lê o
 4. Apagar o XML do histórico.
 
 ## Contagem
-- Os D são **15**: A9 a A15 (7) e B2, B3, B5, B6, B7, B8, B9 e B13 (8).
-- Erro digitado ou retentativa = 1 intervenção + 1 comando extra.
+- Os D são **15**: A9 a A15 (7) e B2, B3, B5, B6 (B6-cal ou B6-serie, nunca as duas), B7, B8, B9 e B13 (8).
+- 1 incidente fora do roteiro (erro digitado, retentativa, improviso) = **1 intervenção + 1 comando extra**, independentemente de quantos comandos a recuperação exigir. Descrever o incidente em `observacoes` (o IP real nunca vai para arquivo, nem nas observações).
 - Dados sensíveis manuais: 1 (a senha do smoke).
 
 ## O que a coleta mede

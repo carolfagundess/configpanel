@@ -211,6 +211,19 @@ function Get-DuracaoTrecho {
     return $null
 }
 
+# Duracao dos 2 docker push do job push-to-ecr: do primeiro "The push refers to repository" ate a linha
+# "<sha>: digest: sha256:..." do segundo push. O docker imprime so a tag no inicio da linha (sem "repo:").
+function Get-DuracaoPush {
+    param([string[]]$Linhas, [string]$Sha)
+    return (Get-DuracaoTrecho $Linhas 'The push refers to repository' "\s${Sha}: digest: sha256:")
+}
+
+# Entradas do Get-History iniciadas a partir do merge (descarta as de entregas anteriores da mesma janela).
+function Select-HistoricoDesde {
+    param($Historico, [datetime]$DesdeUtc)
+    return , @($Historico | Where-Object { $_.StartExecutionTime.ToUniversalTime() -ge $DesdeUtc })
+}
+
 # Valor "Version:" do bloco "Runner Image" (igual ao coleta-pipeline.ps1).
 function Get-ImageVersion {
     param([string]$Log)
@@ -283,6 +296,25 @@ if ($AutoTeste) {
     Assert-Igual 'pull: duracao pelo log do GitHub' '3.5' (Get-DuracaoTrecho $pull 'Pulling from' 'Status: (Downloaded newer image|Image is up to date)')
     $c = Read-Camadas @('abcdefabcdef: Pushed', '0123456789ab: Layer already exists', 'latest: digest: sha256:00 size: 1')
     Assert-Igual 'push: estados' 'Pushed|Layer already exists' (($c | ForEach-Object { $_.Estado }) -join '|')
+    $shaT = 'e3be1402793e115e222e4d5a77ea8d0660496dbf'
+    $logPushT = @(
+        ('2026-10-29T02:19:17.4918410Z ##[group]Run docker build -t $ECR_REGISTRY/$IMAGE_NAME:latest -t $ECR_REGISTRY/$IMAGE_NAME:' + $shaT + ' .'),
+        ('2026-10-29T02:19:17.4920044Z docker push $ECR_REGISTRY/$IMAGE_NAME:' + $shaT),
+        '2026-10-29T02:19:28.0862701Z The push refers to repository [111111111111.dkr.ecr.us-east-2.amazonaws.com/configpanel-backend]',
+        '2026-10-29T02:19:32.4938575Z latest: digest: sha256:76c6 size: 1993',
+        '2026-10-29T02:19:32.5162222Z The push refers to repository [111111111111.dkr.ecr.us-east-2.amazonaws.com/configpanel-backend]',
+        ('2026-10-29T02:19:33.9452249Z ' + $shaT + ': digest: sha256:76c6 size: 1993')
+    )
+    Assert-Igual 'push: duracao dos 2 push (log real da C001)' '5.859' (Format-Segundos (Get-DuracaoPush $logPushT $shaT))
+    Assert-Igual 'build: duracao ate o primeiro push' '10.594' (Format-Segundos (Get-DuracaoTrecho $logPushT 'docker build -t' 'The push refers to repository'))
+
+    $merge = ConvertTo-UtcDate '2026-10-29T14:47:30Z'
+    $histT = @(
+        [pscustomobject]@{ Id = 43; StartExecutionTime = (ConvertTo-UtcDate '2026-10-29T02:41:10Z') },
+        [pscustomobject]@{ Id = 86; StartExecutionTime = (ConvertTo-UtcDate '2026-10-29T14:47:30Z') },
+        [pscustomobject]@{ Id = 87; StartExecutionTime = (ConvertTo-UtcDate '2026-10-29T14:48:02Z').ToLocalTime() }
+    )
+    Assert-Igual 'historico: so comandos desde o merge (hora local aceita)' '86,87' ((Select-HistoricoDesde $histT $merge | ForEach-Object { $_.Id }) -join ',')
 
     Assert-Igual 'gatilho vazio' 'vazio' (Get-Gatilho @() 0 0)
     Assert-Igual 'gatilho marcador' 'marcador' (Get-Gatilho @('backend/src/marcador-deploy.js') 1 1)
@@ -510,7 +542,7 @@ try {
                 $cPush = Read-Camadas $logPush
                 $relatorio.Add("push (log do job): $(@($cPush | Where-Object { $_.Estado -eq 'Pushed' }).Count) Pushed, $(@($cPush | Where-Object { $_.Estado -eq 'Layer already exists' }).Count) Layer already exists (somando os 2 docker push)")
                 $dBuild = Get-DuracaoTrecho $logPush 'docker build -t' 'The push refers to repository'
-                $dPush = Get-DuracaoTrecho $logPush 'The push refers to repository' ":$shaCompleto\: digest: sha256:"
+                $dPush = Get-DuracaoPush $logPush $shaCompleto
                 $relatorio.Add("duracao no log do push-to-ecr: build ~$(if ($null -ne $dBuild) { Format-Segundos $dBuild } else { '?' }) s; os 2 push ~$(if ($null -ne $dPush) { Format-Segundos $dPush } else { '?' }) s")
             }
             $relatorio.Add('steps do run (startedAt/completedAt, precisao de 1 s):')
@@ -532,8 +564,9 @@ try {
             else { $avisos.Add('~/serie2-pull.txt ausente: rode o B6 de calibracao com tee') }
             if ($DuracaoPullS) { $duracaoPull = [double]::Parse($DuracaoPullS, $inv) }
             if ($HistoricoXml) {
-                $hist = @(Import-Clixml -LiteralPath $HistoricoXml)
-                $relatorio.Add('comandos do PC (Get-History, EndExecutionTime - StartExecutionTime):')
+                $histTodo = @(Import-Clixml -LiteralPath $HistoricoXml)
+                $hist = Select-HistoricoDesde $histTodo $inicio
+                $relatorio.Add("comandos do PC (Get-History desde o merge, EndExecutionTime - StartExecutionTime; $($histTodo.Count - $hist.Count) entrada(s) anterior(es) ignorada(s)):")
                 foreach ($h in $hist) {
                     $cmd = [string]$h.CommandLine
                     $rotulo = $null

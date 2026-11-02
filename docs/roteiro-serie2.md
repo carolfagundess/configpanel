@@ -47,7 +47,7 @@ Changelog v1.1: fim só no p13 (p08, p10 e p12 saíram: com o mesmo código em t
 
 ## Entrega manual
 
-Seguir **`docs/roteiro-manual-serie2.md`** (v2.0), que tem todos os comandos. Resumo: o PR vem do `serie2-preparar.ps1`; merge com ` [skip ci]` no título; partes A e B com os mesmos 15 comandos D do v1.4 (o A2 aceita a ficha e as evidências alteradas); sem w32tm, sem C3/C4 e sem history da EC2; depois do smoke, a `serie2-coleta.ps1` gera a linha da ficha.
+Seguir **`docs/roteiro-manual-serie2.md`** (v2.1), que tem todos os comandos. Resumo: o PR vem do `serie2-preparar.ps1`; merge com ` [skip ci]` no título; partes A e B com os mesmos 15 comandos D do v1.4 (o A2 aceita a ficha e as evidências alteradas); sem w32tm, sem C3/C4 e sem history da EC2; depois do smoke, a `serie2-coleta.ps1` gera a linha da ficha.
 
 ## Calibração (4 entregas, todas `nao_e_amostra=sim`)
 

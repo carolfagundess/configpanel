@@ -148,7 +148,8 @@ try {
     else {
         'Modalidade pipeline: Squash and merge sem alterar o titulo.'
     }
-    $corpo = "Entrega $Id da serie 2 da PoC (modalidade $Modalidade, gatilho $Gatilho), preparada por scripts/serie2-preparar.ps1.`n`n$lembrete`n`nDepois do merge: scripts/serie2-coleta.ps1 -Id $Id -Rodada <n> -Modalidade $Modalidade -Sha <sha do merge>, antes do proximo deploy."
+    # Comandos entre crases (inline code): sem elas o Markdown do GitHub engole os placeholders entre < e >.
+    $corpo = "Entrega $Id da serie 2 da PoC (modalidade $Modalidade, gatilho $Gatilho), preparada por ``scripts/serie2-preparar.ps1``.`n`n$lembrete`n`nDepois do merge, antes do proximo deploy: ``.\scripts\serie2-coleta.ps1 -Id $Id -Rodada <n> -Modalidade $Modalidade -Sha <sha do merge>``"
     $url = Invoke-Gh @('pr', 'create', '--base', 'main', '--head', $branch, '--title', $titulo, '--body', $corpo)
     $pr = (Invoke-Gh @('pr', 'view', $branch, '--json', 'number')) | ConvertFrom-Json
     $numero = [string]$pr.number
@@ -164,14 +165,28 @@ try {
     if ($diff -ne $esperado) { throw "o PR #$numero tem diff $diff (arquivos/+/-); esperado $esperado. Feche o PR" }
 
     # 7) Checks obrigatorios e mergeStateStatus.
-    Write-Host "PR #$numero aberto; esperando os checks obrigatorios..."
+    #    Logo depois do pr create o gh responde "no checks reported" (codigo 1): repete a cada 5 s, ate 120 s.
+    #    O ErrorActionPreference fica em Continue durante a chamada porque, no Windows PowerShell 5.1, o stderr
+    #    de um executavel redirecionado com Stop vira erro terminante e abortava o script na primeira tentativa.
+    Write-Host "PR #$numero aberto; esperando os checks aparecerem..."
+    $limiteChecksS = 120
+    $relogio = [System.Diagnostics.Stopwatch]::StartNew()
     $registrados = $false
-    for ($i = 0; $i -lt 12 -and -not $registrados; $i++) {
-        $null = & gh pr checks $numero --required 2>$null
+    while (-not $registrados) {
+        $eap = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        try { $null = & gh pr checks $numero --required 2>&1; $codigo = $LASTEXITCODE }
+        finally { $ErrorActionPreference = $eap }
         # 0 = todos passaram; 8 = pendentes. Qualquer um dos dois indica que os checks ja foram registrados.
-        if ($LASTEXITCODE -eq 0 -or $LASTEXITCODE -eq 8) { $registrados = $true } else { Start-Sleep -Seconds 5 }
+        if ($codigo -eq 0 -or $codigo -eq 8) { $registrados = $true; break }
+        if ($relogio.Elapsed.TotalSeconds -ge $limiteChecksS) { break }
+        Start-Sleep -Seconds 5
     }
-    if (-not $registrados) { throw "os checks do PR #$numero nao apareceram em 60 s" }
+    if (-not $registrados) {
+        throw ("os checks do PR #$numero nao apareceram em $limiteChecksS s (nenhum merge foi feito). " +
+            "Acompanhe a mao com: gh pr checks $numero --watch ; quando passarem, confira o mergeStateStatus CLEAN no PR e volte para a main (git switch main)")
+    }
+    Write-Host "Checks registrados em $([int]$relogio.Elapsed.TotalSeconds) s; esperando a conclusao dos obrigatorios..."
     & gh pr checks $numero --required --watch --fail-fast --interval 10
     if ($LASTEXITCODE -ne 0) { throw "checks obrigatorios do PR #$numero falharam" }
 
