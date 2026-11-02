@@ -2,7 +2,7 @@
 
 Versão 2.1, 30/10/2026. Substitui o `roteiro-manual.md` v1.4 **apenas para a série 2**; o v1.4 continua valendo como histórico da série 1. Contexto, métricas e calibração da série 2: `docs/roteiro-serie2.md`.
 Princípio: a série 2 mede a entrega, não o produto.
-Changelog v2.1 (correções da calibração C001-C004): `Test-NetConnection` e `docker-compose up -d postgres` passam para antes do merge (o A4 só confere); o B6 vira duas linhas (B6-cal e B6-serie); regra de contagem de incidentes explícita.
+Changelog v2.1 (correções da calibração C001-C004): `Test-NetConnection` e `docker-compose up -d postgres` passam para antes do merge (o A4 só confere); o B6 vira duas linhas (B6-cal e B6-serie); regra de contagem de incidentes explícita; alternância estrita só dentro da rodada.
 Regra: um comando por vez, mesma janela do PowerShell do início ao fim, de casa ou do hotspot (o firewall do IFSul bloqueia 22 e 3001). Não reiniciar a EC2. Nunca `docker stop`/`docker rm` no `configpanel-postgres`. Nenhum segredo digitado ou colado em chat.
 
 Tipos: **D** = comando de deploy, **P** = preparação/verificação (contados separados). Intervenção = qualquer coisa fora deste roteiro (erro, retentativa, improviso).
@@ -13,6 +13,7 @@ Tipos: **D** = comando de deploy, **P** = preparação/verificação (contados s
 - P: `Test-NetConnection $EC2_IP -Port 22` (esperado `TcpTestSucceeded : True`; senão PARE: IP errado).
 - P: `docker-compose up -d postgres` (o A4 só confere que ele está rodando).
 - O PR da entrega vem de `git switch main; git pull --ff-only` e `.\scripts\serie2-preparar.ps1 -Id <Id> -Modalidade manual -Gatilho <vazio|marcador>` (substitui "código do incremento pronto"; o script espera os checks e o `CLEAN` e não faz merge).
+  - Alternância estrita só **dentro da mesma rodada**. A rodada sai do Id: `C...` = 0 (calibração); `0001`-`0010` = 1; `0011`-`0020` = 2; e assim por diante. A primeira entrega de uma rodada nova aceita qualquer modalidade (ex.: `0010` manual na rodada 1 e `0011` manual na rodada 2). Rodada menor que a da última linha da ficha é recusada. `-Rodada <n>` só para um Id fora desse padrão.
 - Sem conferência de relógio (o w32tm sai) e sem preencher a ficha à mão antes: a linha vem da coleta.
 
 ## Merge (marca o início do relógio)

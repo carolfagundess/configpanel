@@ -10,7 +10,7 @@ Changelog v1.1: fim só no p13 (p08, p10 e p12 saíram: com o mesmo código em t
 - Cada entrega é **só um deploy do mesmo código**. O gatilho é o merge (Squash and merge) de um PR preparado por `scripts/serie2-preparar.ps1`:
   - **vazio**: um `git commit --allow-empty` (0 arquivos);
   - **marcador**: troca de 1 linha em `backend/src/marcador-deploy.js` (`serie2-<Id>`, sempre 45 caracteres), arquivo que nenhum módulo importa. Fica dentro de `backend/`, então entra no `COPY . .` do Dockerfile.
-- **Alternância estrita** pipeline/manual, entrega a entrega (o script confere pela última linha da ficha v2). O número de entregas fica em aberto.
+- **Alternância estrita** pipeline/manual, entrega a entrega, dentro de cada rodada (o script confere pela última linha da ficha v2; a primeira entrega de uma rodada nova aceita qualquer modalidade; regra completa no `roteiro-manual-serie2.md` v2.1). O número de entregas fica em aberto.
 - **Id**: 4 caracteres, sempre do mesmo tamanho (`C001` a `C004` na calibração; `0001` em diante nas amostras).
 - **Rodada**: número informado na coleta (`-Rodada`; 0 = calibração). Uma rodada é uma sessão de entregas seguidas, fechada pelo PR de docs (abaixo).
 - **Início** = hora do commit de merge (servidor do GitHub, precisão de 1 s).
