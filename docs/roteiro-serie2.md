@@ -1,7 +1,8 @@
 # Roteiro da série 2 (deploy do mesmo código, pipeline × manual)
 
-Versão 1.3, 28/10/2026. Base: decisões da orientação de 27/10 e da Carol (28/10). A série 2 **não se mistura** com a série 1: ficha própria (`docs/ficha-coleta-serie2.csv`) e evidências em `docs/evidencias-serie2/`. A série 2 mede a entrega, não o produto.
-Changelog v1.3: os comandos da entrega manual passam para `docs/roteiro-manual-serie2.md` (v2.0); aqui fica só o resumo.
+Versão 1.4, 02/11/2026. Base: decisões da orientação de 27/10 e da Carol (28/10). A série 2 **não se mistura** com a série 1: ficha própria (`docs/ficha-coleta-serie2.csv`) e evidências em `docs/evidencias-serie2/`. A série 2 mede a entrega, não o produto.
+Changelog v1.4: referência ao `roteiro-manual-serie2.md` v2.2 (início de sessão, conferência dos digests antes do ssh, aviso sobre a parte B); registro da falha da 0008 e da reposição 0021.
+Changelog v1.3: os comandos da entrega manual passam para `docs/roteiro-manual-serie2.md` (v2.1); aqui fica só o resumo.
 Changelog v1.2: métrica principal passa a ser `tempo_ate_container_s` (entrega pura); o p13 vira métrica secundária; o smoke continua rodando e registrado, mas fora do cronômetro principal; limitação do `StartedAt` registrada.
 Changelog v1.1: fim só no p13 (p08, p10 e p12 saíram: com o mesmo código em todas as entregas, não acrescentam informação); colunas `rodada` e `tempo_ate_container_s`; `git pull --ff-only` antes de cada preparação; PR de docs no fim da rodada; limpeza das branches `serie2/*`.
 
@@ -10,7 +11,7 @@ Changelog v1.1: fim só no p13 (p08, p10 e p12 saíram: com o mesmo código em t
 - Cada entrega é **só um deploy do mesmo código**. O gatilho é o merge (Squash and merge) de um PR preparado por `scripts/serie2-preparar.ps1`:
   - **vazio**: um `git commit --allow-empty` (0 arquivos);
   - **marcador**: troca de 1 linha em `backend/src/marcador-deploy.js` (`serie2-<Id>`, sempre 45 caracteres), arquivo que nenhum módulo importa. Fica dentro de `backend/`, então entra no `COPY . .` do Dockerfile.
-- **Alternância estrita** pipeline/manual, entrega a entrega, dentro de cada rodada (o script confere pela última linha da ficha v2; a primeira entrega de uma rodada nova aceita qualquer modalidade; regra completa no `roteiro-manual-serie2.md` v2.1). O número de entregas fica em aberto.
+- **Alternância estrita** pipeline/manual, entrega a entrega, dentro de cada rodada (o script confere pela última linha da ficha v2; a primeira entrega de uma rodada nova aceita qualquer modalidade; regra completa no `roteiro-manual-serie2.md` v2.2). O número de entregas fica em aberto.
 - **Id**: 4 caracteres, sempre do mesmo tamanho (`C001` a `C004` na calibração; `0001` em diante nas amostras).
 - **Rodada**: número informado na coleta (`-Rodada`; 0 = calibração). Uma rodada é uma sessão de entregas seguidas, fechada pelo PR de docs (abaixo).
 - **Início** = hora do commit de merge (servidor do GitHub, precisão de 1 s).
@@ -47,7 +48,9 @@ Changelog v1.1: fim só no p13 (p08, p10 e p12 saíram: com o mesmo código em t
 
 ## Entrega manual
 
-Seguir **`docs/roteiro-manual-serie2.md`** (v2.1), que tem todos os comandos. Resumo: o PR vem do `serie2-preparar.ps1`; merge com ` [skip ci]` no título; partes A e B com os mesmos 15 comandos D do v1.4 (o A2 aceita a ficha e as evidências alteradas); sem w32tm, sem C3/C4 e sem history da EC2; depois do smoke, a `serie2-coleta.ps1` gera a linha da ficha.
+Seguir **`docs/roteiro-manual-serie2.md`** (v2.2), que tem todos os comandos. Resumo: o PR vem do `serie2-preparar.ps1`; merge com ` [skip ci]` no título; partes A e B com os mesmos 15 comandos D do v1.4 (o A2 aceita a ficha e as evidências alteradas); sem w32tm, sem C3/C4 e sem history da EC2; depois do smoke, a `serie2-coleta.ps1` gera a linha da ficha.
+
+**Falha da 0008 e reposição 0021:** na 0008 (manual) o push do `latest` foi omitido e a EC2 subiu a imagem da entrega anterior (o smoke passou, porque só testa se a API responde); ela é reposta pela entrega **0021** (`-Rodada 3`), identificada na ficha como reposição da 0008.
 
 ## Calibração (4 entregas, todas `nao_e_amostra=sim`)
 
