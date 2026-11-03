@@ -18,3 +18,4 @@ Thumbs.db
 
 # VS Code
 .vscode/
+!docs/evidencias-serie2/*.log

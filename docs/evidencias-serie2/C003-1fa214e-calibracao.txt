@@ -1,0 +1,57 @@
+CALIBRACAO entrega C003 (pipeline, gatilho marcador), merge 1fa214e
+committer: GitHub / web-flow; pais: 1; arquivos: 1; titulo: serie2: entrega C003 (pipeline, gatilho marcador) (#48)
+runs de push na main para o commit: 1
+digest ECR (tag 1fa214e): sha256:a2bdf4af5dd25133c02f81774f65657ef77e094f84249f1867bce073d5e5b62d; imagem em execucao (id local): sha256:a2bdf4af5dd25133c02f81774f65657ef77e094f84249f1867bce073d5e5b62d
+imagePushedAt: 2026-10-28T23:52:59.802000-03:00; tamanho ECR: 66871235 bytes; tags: latest,1fa214ec2041b22717f0b207d9457537bd2e561e
+formato: manifesto simples (application/vnd.docker.distribution.manifest.v2+json)
+config: sha256:728c1b020f65db017d20193781a1d03548d0ff68df708148068f9f87f4c49b8f
+push (log do job): 4 Pushed, 12 Layer already exists (somando os 2 docker push)
+duracao no log do push-to-ecr: build ~5.707 s; os 2 push ~? s
+steps do run (startedAt/completedAt, precisao de 1 s):
+  test-backend   | Set up job                                    |    1 s | success
+  test-backend   | Initialize containers                         |   17 s | success
+  test-backend   | Faz checkout do c├│digo                       |    1 s | success
+  test-backend   | Configura o Node.js                           |    1 s | success
+  test-backend   | Instala depend├¬ncias                         |    2 s | success
+  test-backend   | Roda as migrations                            |    0 s | success
+  test-backend   | Roda os testes                                |    3 s | success
+  test-backend   | Post Configura o Node.js                      |    0 s | success
+  test-backend   | Post Faz checkout do c├│digo                  |    0 s | success
+  test-backend   | Stop containers                               |    1 s | success
+  test-backend   | Complete job                                  |    0 s | success
+  build-docker   | Set up job                                    |    0 s | success
+  build-docker   | Faz checkout do c├│digo                       |    1 s | success
+  build-docker   | Builda a imagem Docker                        |    7 s | success
+  build-docker   | Post Faz checkout do c├│digo                  |    0 s | success
+  build-docker   | Complete job                                  |    0 s | success
+  push-to-ecr    | Set up job                                    |    2 s | success
+  push-to-ecr    | Faz checkout do c├│digo                       |    1 s | success
+  push-to-ecr    | Configura credenciais da AWS                  |    0 s | success
+  push-to-ecr    | Login no ECR                                  |    1 s | success
+  push-to-ecr    | Builda, marca e envia a imagem pro ECR        |   12 s | success
+  push-to-ecr    | Post Login no ECR                             |    0 s | success
+  push-to-ecr    | Post Configura credenciais da AWS             |    0 s | success
+  push-to-ecr    | Post Faz checkout do c├│digo                  |    0 s | success
+  push-to-ecr    | Complete job                                  |    1 s | success
+  Deploy to EC2  | Set up job                                    |    0 s | success
+  Deploy to EC2  | Build appleboy/ssh-action@v1.0.3              |    3 s | success
+  Deploy to EC2  | Deploy via SSH                                |   14 s | success
+  Deploy to EC2  | Valida que a API respondeu                    |    3 s | success
+  Deploy to EC2  | Complete job                                  |    0 s | success
+  Smoke test     | Set up job                                    |    1 s | success
+  Smoke test     | Faz checkout do c├│digo                       |    1 s | success
+  Smoke test     | Roda o smoke test                             |    8 s | success
+  Smoke test     | Post Faz checkout do c├│digo                  |    0 s | success
+  Smoke test     | Complete job                                  |    0 s | success
+pull na EC2: 4 camada(s) baixada(s), 0 ja existente(s); duracao: 0.921 s
+camadas da imagem (digest, tamanho comprimido, nova no ECR, baixada na EC2):
+  7b229517ed22 |    3853109 | nao | nao
+  522ca12b284b |   57376882 | nao | nao
+  ef0ad2fdf0fd |    1262442 | nao | nao
+  c728384fb906 |        441 | nao | nao
+  2efbcb07f8c3 |         93 | sim | sim
+  2c917088acfc |      53022 | sim | sim
+  01d0c458085d |    4250311 | sim | sim
+  bb32cc798d0a |      67120 | sim | sim
+total: 4 camada(s) nova(s) no ECR (4370546 bytes); 4 baixada(s) na EC2 (4370546 bytes)
+disco da EC2 (/): 82%

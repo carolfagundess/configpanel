@@ -1,0 +1,25 @@
+CALIBRACAO entrega C002 (manual, gatilho vazio), merge d9f2440
+committer: GitHub / web-flow; pais: 1; arquivos: 0; titulo: serie2: entrega C002 (manual, gatilho vazio) (#46)  [skip ci]
+runs de push na main para o commit: 0
+digest ECR (tag d9f2440): sha256:38785656dd2b04842452055b6e791cbc4517672a61ce30d1d64fa5dbbe6f6232; imagem em execucao (id local): sha256:38785656dd2b04842452055b6e791cbc4517672a61ce30d1d64fa5dbbe6f6232
+imagePushedAt: 2026-10-28T23:40:52.188000-03:00; tamanho ECR: 61952337 bytes; tags: d9f24406f6da75b10245c68e3e4f10fc4887bc6a,latest
+formato: indice (application/vnd.oci.image.index.v1+json) com 2 manifesto(s); imagem linux/amd64: sha256:8d8110a137caac17cff53c3fcf1a24955bd773e1f43d578342c86eefd02190f6
+config: sha256:463ca993017bd1a577b7f9b15c9490267972165285798b957fa0ce86e046851e
+comandos do PC (Get-History, EndExecutionTime - StartExecutionTime):
+  Id   39 | A11 docker build         | 2.383 s
+  Id   40 | A12 login ECR            | 6.642 s
+  Id   41 | A13 docker push latest   | 7.054 s
+  Id   42 | A13 docker push latest   | 2.735 s
+  Id   43 | A14 docker push sha      | 2.798 s
+pull na EC2: 1 camada(s) baixada(s), 0 ja existente(s); duracao: 0.542 s
+camadas da imagem (digest, tamanho comprimido, nova no ECR, baixada na EC2):
+  55afa1ecc21d |    3846391 | nao | nao
+  7e2a5e2761f5 |   52524717 | nao | nao
+  57eb903fc7a4 |    1262109 | nao | nao
+  21af007bacf6 |        448 | nao | nao
+  7bf5e757bba7 |         93 | nao | nao
+  18b2d619636d |      53153 | nao | nao
+  9c9c928df278 |    4189948 | nao | nao
+  52a3cf1e2e46 |      67819 | sim | sim
+total: 1 camada(s) nova(s) no ECR (67819 bytes); 1 baixada(s) na EC2 (67819 bytes)
+disco da EC2 (/): 82%
