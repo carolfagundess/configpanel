@@ -1,15 +1,24 @@
 # Roteiro manual da série 2 (entrega manual, deploy do mesmo código)
 
-Versão 2.1, 30/10/2026. Substitui o `roteiro-manual.md` v1.4 **apenas para a série 2**; o v1.4 continua valendo como histórico da série 1. Contexto, métricas e calibração da série 2: `docs/roteiro-serie2.md`.
+Versão 2.2, 02/11/2026. Substitui o `roteiro-manual.md` v1.4 **apenas para a série 2**; o v1.4 continua valendo como histórico da série 1. Contexto, métricas e calibração da série 2: `docs/roteiro-serie2.md`.
 Princípio: a série 2 mede a entrega, não o produto.
+Changelog v2.2 (lições das entregas 0008 e 0010): seção "Início de sessão"; sequência login → push `latest` → push `$SHA` explícita, com conferência P dos digests (A14b) antes do ssh; aviso de que os comandos da parte B não usam `$REG`/`$SHA` do PC; regra da senha do smoke digitada duas vezes na contagem. Os D continuam 15.
 Changelog v2.1 (correções da calibração C001-C004): `Test-NetConnection` e `docker-compose up -d postgres` passam para antes do merge (o A4 só confere); o B6 vira duas linhas (B6-cal e B6-serie); regra de contagem de incidentes explícita; alternância estrita só dentro da rodada.
 Regra: um comando por vez, mesma janela do PowerShell do início ao fim, de casa ou do hotspot (o firewall do IFSul bloqueia 22 e 3001). Não reiniciar a EC2. Nunca `docker stop`/`docker rm` no `configpanel-postgres`. Nenhum segredo digitado ou colado em chat.
 
 Tipos: **D** = comando de deploy, **P** = preparação/verificação (contados separados). Intervenção = qualquer coisa fora deste roteiro (erro, retentativa, improviso).
 
+## Início de sessão (uma vez por sessão, fora do tempo)
+1. Abrir uma janela nova do PowerShell na pasta do projeto (`configpanel`); é a janela que será usada até o fim.
+2. `$EC2_IP = "<IP_DA_EC2>"` e `$env:EC2_IP = $EC2_IP` (com aspas; o IP real só no terminal, nunca em arquivo).
+3. Conferir imprimindo `$EC2_IP` (tem que aparecer o IP; vazio ou errado = PARE).
+4. `ssh -i "$HOME\.ssh\configpanel-key.pem" ubuntu@$EC2_IP "df -h /"` (esperado `Use%` em torno de 70%; bem acima disso, ver a regra 3 do `roteiro-serie2.md` antes de seguir).
+5. `git switch main; git pull --ff-only`.
+6. `Import-Csv docs\ficha-coleta-serie2.csv | Select-Object -Last 1 | Format-List id,modalidade` (a última linha tem que ser a entrega anterior; senão PARE: falta colar uma coleta).
+
 ## Antes do merge (fora do tempo)
 - Docker Desktop ligado; `docker version --format '{{.Server.Version}}'` e `aws sts get-caller-identity --query Account --output text` funcionando.
-- Na janela que será usada até o fim: `$EC2_IP = "<IP_DA_EC2>"` e `$env:EC2_IP = $EC2_IP` (o IP real só no terminal, nunca em arquivo).
+- `$EC2_IP` e `$env:EC2_IP` já definidos no início de sessão, na mesma janela.
 - P: `Test-NetConnection $EC2_IP -Port 22` (esperado `TcpTestSucceeded : True`; senão PARE: IP errado).
 - P: `docker-compose up -d postgres` (o A4 só confere que ele está rodando).
 - O PR da entrega vem de `git switch main; git pull --ff-only` e `.\scripts\serie2-preparar.ps1 -Id <Id> -Modalidade manual -Gatilho <vazio|marcador>` (substitui "código do incremento pronto"; o script espera os checks e o `CLEAN` e não faz merge).
@@ -37,12 +46,17 @@ Tipos: **D** = comando de deploy, **P** = preparação/verificação (contados s
 | A9 | D | `$ACCOUNT_ID = aws sts get-caller-identity --query Account --output text` (não imprime nada; isso é esperado) |
 | A10 | D | `$REG = "$ACCOUNT_ID.dkr.ecr.us-east-2.amazonaws.com"; $SHA = git rev-parse HEAD` |
 | A11 | D | `docker build -t "$REG/configpanel-backend:latest" -t "$REG/configpanel-backend:$SHA" backend` |
-| A12 | D | `aws ecr get-login-password --region us-east-2 \| docker login --username AWS --password-stdin $REG` |
-| A13 | D | `docker push "$REG/configpanel-backend:latest"` |
+| A12 | D | `aws ecr get-login-password --region us-east-2 \| docker login --username AWS --password-stdin $REG` (uma vez só, logo depois do build) |
+| A13 | D | `docker push "$REG/configpanel-backend:latest"` (primeiro o `latest`: é a tag que a EC2 baixa no B6) |
 | A14 | D | `docker push "$REG/configpanel-backend:$SHA"` |
+| A14b | P | Conferir na tela: as linhas `digest: sha256:...` do A13 e do A14 têm que ser iguais. Se o push do `latest` não aparecer ou os digests divergirem, PARE e não siga para a parte B. |
 | A15 | D | `ssh -i "$HOME\.ssh\configpanel-key.pem" ubuntu@$EC2_IP` |
 
+Sequência fixa depois do build: login no ECR uma vez só (A12) → push do `latest` (A13) → push do `$SHA` (A14) → conferência dos digests (A14b) → ssh (A15). Motivo do A14b: na entrega 0008 o push do `latest` foi omitido, a EC2 baixou o `latest` antigo e subiu a imagem da entrega anterior, e o smoke passou, porque só testa se a API responde.
+
 ## Parte B: EC2 (um comando por vez)
+**Aviso:** dentro do ssh valem só os comandos desta tabela. Eles não usam as variáveis `$REG` e `$SHA` do PC (na EC2 elas não existem; a conta vem do B2). Não digitar comandos da parte A dentro do ssh: foi o incidente da 0010.
+
 | # | Tipo | Comando |
 |---|---|---|
 | B1 | P | `export HISTCONTROL=; export HISTTIMEFORMAT="%F %T "` |
@@ -71,7 +85,7 @@ O C3 (Get-History em tabela) e o C4 (`git log %cI`) do v1.4 saem: a coleta lê o
 
 ## Depois do smoke (fora do tempo e da contagem)
 1. Só na calibração: `Get-History | Export-Clixml "$env:TEMP\serie2-hist-<Id>.xml"` (contém a linha do `$EC2_IP`: não commitar e apagar depois da coleta).
-2. Coleta (o IP vem do `$env:EC2_IP` definido antes do merge):
+2. Coleta (o IP vem do `$env:EC2_IP` definido no início de sessão):
    `.\scripts\serie2-coleta.ps1 -Id <Id> -Rodada <n> -Modalidade manual -Sha $SHA -SmokeOk <sim|nao>`
    - Na calibração, acrescentar: `-NaoEhAmostra -Calibracao -HistoricoXml "$env:TEMP\serie2-hist-<Id>.xml" -DuracaoPullS <real do time, em s>`.
    - `-Rodada 0` = calibração. Obrigatórios: `-Id`, `-Rodada`, `-Modalidade` e `-Sha`. O `-SmokeOk` é opcional no script, mas sem ele, no manual, a coluna `smoke_ok` fica vazia (a coleta avisa): informe sempre.
@@ -79,9 +93,9 @@ O C3 (Get-History em tabela) e o C4 (`git log %cI`) do v1.4 saem: a coleta lê o
 4. Apagar o XML do histórico.
 
 ## Contagem
-- Os D são **15**: A9 a A15 (7) e B2, B3, B5, B6 (B6-cal ou B6-serie, nunca as duas), B7, B8, B9 e B13 (8).
-- 1 incidente fora do roteiro (erro digitado, retentativa, improviso) = **1 intervenção + 1 comando extra**, independentemente de quantos comandos a recuperação exigir. Descrever o incidente em `observacoes` (o IP real nunca vai para arquivo, nem nas observações).
-- Dados sensíveis manuais: 1 (a senha do smoke).
+- Os D são **15**: A9 a A15 (7) e B2, B3, B5, B6 (B6-cal ou B6-serie, nunca as duas), B7, B8, B9 e B13 (8). O A14b é P e não conta.
+- 1 incidente fora do roteiro (erro digitado, retentativa, improviso; ex.: comando do PC digitado dentro do ssh) = **1 intervenção + 1 comando extra**, independentemente de quantos comandos a recuperação exigir. Descrever o incidente em `observacoes` (o IP real nunca vai para arquivo, nem nas observações).
+- Dados sensíveis manuais: 1 (a senha do smoke). Se a senha do smoke for digitada duas vezes = **2 dados sensíveis**.
 
 ## O que a coleta mede
 - Início: commit de merge (hora do servidor do GitHub).
